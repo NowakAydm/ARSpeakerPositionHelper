@@ -25,7 +25,8 @@
   "license": "GPL-3.0",
   "dependencies": {
     "three": "^0.158.0",
-    "@tensorflow/tfjs": "^4.15.0"
+    "@tensorflow/tfjs": "^4.15.0",
+    "@tensorflow-models/coco-ssd": "^2.2.2"
   },
   "devDependencies": {
     "http-server": "^14.1.1"

@@ -47,9 +47,9 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 - [x] AR coordinate system setup
 
 ### Phase 3: Object Detection
-- [ ] TensorFlow.js integration
-- [ ] Speaker detection using pre-trained models
-- [ ] AR space mapping for detected objects
+- [x] TensorFlow.js integration
+- [x] Speaker detection using pre-trained models
+- [x] AR space mapping for detected objects
 
 ### Phase 4: User Interaction
 - [ ] Touch interaction in AR space

@@ -4,11 +4,13 @@
  */
 
 import { ARSession } from './modules/ar-session.js';
+import { ObjectDetection } from './modules/detection.js';
 
 class ARSpeakerApp {
     constructor() {
         this.isARSupported = false;
         this.arSession = null;
+        this.objectDetection = null;
         this.speakers = [];
         this.userPosition = null;
         
@@ -21,6 +23,10 @@ class ARSpeakerApp {
         try {
             // Initialize UI elements
             this.initializeUI();
+            
+            // Initialize object detection
+            this.objectDetection = new ObjectDetection();
+            await this.objectDetection.loadModel();
             
             // Check AR support
             await this.checkARSupport();
@@ -146,12 +152,15 @@ class ARSpeakerApp {
             // Start the AR session
             await this.arSession.start();
             
+            // Setup object detection integration
+            this.setupObjectDetection();
+            
             // Update UI for active session
             this.elements.startButton.textContent = 'Stop AR Session';
             this.elements.startButton.disabled = false;
             this.elements.calibrateButton.disabled = false;
             
-            this.updateStatus('AR Active');
+            this.updateStatus('AR Active - Looking for speakers...');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Not Set');
             
@@ -169,11 +178,19 @@ class ARSpeakerApp {
         try {
             this.updateStatus('Stopping AR session...');
             
+            // Stop object detection
+            if (this.objectDetection) {
+                this.objectDetection.stopDetection();
+            }
+            
             // Cleanup AR session
             if (this.arSession) {
                 await this.arSession.stop();
                 this.arSession = null;
             }
+            
+            // Clear detected speakers
+            this.speakers = [];
             
             // Reset UI
             this.elements.startButton.textContent = 'Start AR Session';
@@ -225,6 +242,121 @@ class ARSpeakerApp {
         // 1. Use speaker positions
         // 2. Calculate equilateral triangle
         // 3. Provide visual guidance
+    }
+
+    /**
+     * Setup object detection integration with AR session
+     */
+    setupObjectDetection() {
+        if (!this.objectDetection || !this.arSession) {
+            console.warn('⚠️ Object detection or AR session not available');
+            return;
+        }
+
+        // Set up detection callback
+        this.objectDetection.onDetection((detectionData) => {
+            this.handleDetectionResults(detectionData);
+        });
+
+        // Get video element from AR session (if available)
+        // For now, we'll simulate detection without actual video
+        console.log('🔍 Object detection setup complete');
+        
+        // Start simulated detection for demo purposes
+        this.startSimulatedDetection();
+    }
+
+    /**
+     * Handle detection results from TensorFlow.js
+     */
+    handleDetectionResults(detectionData) {
+        const { speakers, speakerCount } = detectionData;
+        
+        // Update speaker list
+        this.speakers = speakers;
+        
+        // Update UI
+        this.updateSpeakerCount(speakerCount);
+        
+        if (speakerCount > 0) {
+            this.updateStatus(`AR Active - ${speakerCount} speaker(s) detected`);
+            
+            // If we have user position and at least 2 speakers, calculate triangle
+            if (this.userPosition && speakerCount >= 2) {
+                this.calculateOptimalTriangle();
+            }
+        } else {
+            this.updateStatus('AR Active - Looking for speakers...');
+        }
+        
+        console.log(`🔊 Detected ${speakerCount} speakers:`, speakers);
+    }
+
+    /**
+     * Simulate object detection for demo purposes
+     * TODO: Remove when actual video detection is implemented
+     */
+    startSimulatedDetection() {
+        let detectionCount = 0;
+        
+        const simulate = () => {
+            if (!this.arSession || !this.arSession.isActive) return;
+            
+            // Simulate finding speakers after a few seconds
+            detectionCount++;
+            
+            if (detectionCount === 30) { // After ~3 seconds at 60fps
+                // Simulate detecting first speaker
+                const mockSpeaker1 = {
+                    id: 'speaker_sim_1',
+                    type: 'speaker',
+                    class: 'laptop',
+                    confidence: 0.85,
+                    position: { x: -1.5, y: 0, z: -2 },
+                    size: { width: 0.3, height: 0.2, depth: 0.2 }
+                };
+                
+                this.handleDetectionResults({
+                    speakers: [mockSpeaker1],
+                    speakerCount: 1,
+                    timestamp: Date.now()
+                });
+                
+            } else if (detectionCount === 90) { // After ~9 seconds
+                // Simulate detecting second speaker
+                const mockSpeakers = [
+                    {
+                        id: 'speaker_sim_1',
+                        type: 'speaker',
+                        class: 'laptop',
+                        confidence: 0.85,
+                        position: { x: -1.5, y: 0, z: -2 },
+                        size: { width: 0.3, height: 0.2, depth: 0.2 }
+                    },
+                    {
+                        id: 'speaker_sim_2',
+                        type: 'speaker',
+                        class: 'book',
+                        confidence: 0.78,
+                        position: { x: 1.5, y: 0, z: -2 },
+                        size: { width: 0.3, height: 0.2, depth: 0.2 }
+                    }
+                ];
+                
+                this.handleDetectionResults({
+                    speakers: mockSpeakers,
+                    speakerCount: 2,
+                    timestamp: Date.now()
+                });
+            }
+            
+            // Continue simulation
+            if (this.arSession && this.arSession.isActive) {
+                requestAnimationFrame(simulate);
+            }
+        };
+        
+        requestAnimationFrame(simulate);
     }
 
     // UI Update Methods
