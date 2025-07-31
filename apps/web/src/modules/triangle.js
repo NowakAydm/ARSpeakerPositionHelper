@@ -1,9 +1,10 @@
 /**
  * Equilateral Triangle Calculation Module
- * Handles optimal listening position geometry
+ * Handles optimal listening position geometry with enhanced error handling
  */
 
-import * as THREE from 'three';
+// Use global THREE object loaded from CDN
+/* global THREE */
 
 export class TriangleCalculator {
     constructor() {

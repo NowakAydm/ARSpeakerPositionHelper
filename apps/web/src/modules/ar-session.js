@@ -1,9 +1,10 @@
 /**
  * WebXR AR Session Management Module
- * Handles AR session lifecycle and camera feed integration
+ * Handles AR session lifecycle and camera feed integration with robust error handling
  */
 
-import * as THREE from 'three';
+// Use global THREE object loaded from CDN
+/* global THREE */
 
 export class ARSession {
     constructor() {
@@ -20,109 +21,162 @@ export class ARSession {
     }
 
     /**
-     * Initialize AR session with WebXR
+     * Initialize AR session with WebXR and comprehensive error handling
      */
     async initialize(container) {
         console.log('🔄 Initializing AR session...');
         
         this.container = container;
         
-        // Check WebXR support
+        // Check WebXR support with detailed error messages
         if (!navigator.xr) {
-            throw new Error('WebXR not supported');
+            throw new Error('WebXR not supported - this browser does not have AR capabilities');
         }
 
-        // Check if immersive AR is supported
-        const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
-        if (!isSupported) {
-            throw new Error('Immersive AR not supported');
+        // Check if immersive AR is supported with timeout protection
+        try {
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('AR support check timed out')), 5000)
+            );
+            
+            const supportCheckPromise = navigator.xr.isSessionSupported('immersive-ar');
+            const isSupported = await Promise.race([supportCheckPromise, timeoutPromise]);
+            
+            if (!isSupported) {
+                throw new Error('Immersive AR not supported on this device');
+            }
+        } catch (supportError) {
+            if (supportError.message.includes('timeout')) {
+                throw new Error('AR support check timed out - device may not support AR');
+            }
+            throw new Error(`AR support check failed: ${supportError.message}`);
         }
 
-        // Setup Three.js scene
-        this.setupThreeJS();
+        // Setup Three.js scene with error handling
+        try {
+            this.setupThreeJS();
+        } catch (threeError) {
+            throw new Error(`3D graphics initialization failed: ${threeError.message}`);
+        }
         
         console.log('✅ AR session initialized');
         return true;
     }
 
     /**
-     * Setup Three.js scene for AR
+     * Setup Three.js scene for AR with comprehensive error handling
      */
     setupThreeJS() {
-        // Create scene
-        this.scene = new THREE.Scene();
+        try {
+            // Check if THREE.js is available
+            if (!window.THREE) {
+                throw new Error('THREE.js library not loaded');
+            }
 
-        // Create camera
-        this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+            // Create scene
+            this.scene = new window.THREE.Scene();
 
-        // Create WebGL renderer with AR context
-        this.renderer = new THREE.WebGLRenderer({ 
-            antialias: true, 
-            alpha: true,
-            preserveDrawingBuffer: true
-        });
-        this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.xr.enabled = true;
-        this.renderer.xr.setReferenceSpaceType('local');
+            // Create camera
+            this.camera = new window.THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
-        // Add basic lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(ambientLight);
+            // Create WebGL renderer with AR context
+            try {
+                this.renderer = new window.THREE.WebGLRenderer({ 
+                    antialias: true, 
+                    alpha: true,
+                    preserveDrawingBuffer: true
+                });
+            } catch (rendererError) {
+                throw new Error(`WebGL renderer creation failed: ${rendererError.message}`);
+            }
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(1, 1, 1);
-        this.scene.add(directionalLight);
+            this.renderer.setPixelRatio(window.devicePixelRatio);
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.xr.enabled = true;
+            this.renderer.xr.setReferenceSpaceType('local');
 
-        // Create reticle (targeting cursor)
-        this.createReticle();
+            // Add basic lighting
+            const ambientLight = new window.THREE.AmbientLight(0xffffff, 0.6);
+            this.scene.add(ambientLight);
 
-        // Add renderer to container
-        if (this.container) {
-            this.container.innerHTML = '';
-            this.container.appendChild(this.renderer.domElement);
+            const directionalLight = new window.THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            this.scene.add(directionalLight);
+
+            // Create reticle (targeting cursor)
+            this.createReticle();
+
+            // Add renderer to container
+            if (this.container) {
+                this.container.innerHTML = '';
+                this.container.appendChild(this.renderer.domElement);
+            } else {
+                throw new Error('AR container element not found');
+            }
+
+            // Handle window resize
+            window.addEventListener('resize', () => this.onWindowResize());
+            
+            console.log('✅ Three.js scene setup complete');
+            
+        } catch (error) {
+            console.error('❌ Three.js setup failed:', error);
+            throw error;
         }
-
-        // Handle window resize
-        window.addEventListener('resize', () => this.onWindowResize());
     }
 
     /**
      * Create targeting reticle
      */
     createReticle() {
-        const geometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2);
-        const material = new THREE.MeshBasicMaterial({ 
+        const geometry = new window.THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2);
+        const material = new window.THREE.MeshBasicMaterial({ 
             color: 0x00ff00,
             transparent: true,
             opacity: 0.8 
         });
-        this.reticle = new THREE.Mesh(geometry, material);
+        this.reticle = new window.THREE.Mesh(geometry, material);
         this.reticle.matrixAutoUpdate = false;
         this.reticle.visible = false;
         this.scene.add(this.reticle);
     }
 
     /**
-     * Start AR session
+     * Start AR session with robust error handling and user guidance
      */
     async start() {
         console.log('▶️ Starting AR session...');
         
         try {
-            // Request AR session with required features
-            this.session = await navigator.xr.requestSession('immersive-ar', {
+            // Request AR session with required features and timeout protection
+            const sessionRequestPromise = navigator.xr.requestSession('immersive-ar', {
                 requiredFeatures: ['hit-test']
             });
+            
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('AR session request timed out - user may have denied camera access')), 10000)
+            );
+            
+            this.session = await Promise.race([sessionRequestPromise, timeoutPromise]);
 
-            // Set up session
+            // Set up session with the renderer
             await this.renderer.xr.setSession(this.session);
             
             // Get reference space
-            this.referenceSpace = await this.session.requestReferenceSpace('local');
+            try {
+                this.referenceSpace = await this.session.requestReferenceSpace('local');
+            } catch (refSpaceError) {
+                console.warn('Local reference space failed, trying viewer space:', refSpaceError);
+                this.referenceSpace = await this.session.requestReferenceSpace('viewer');
+            }
 
-            // Set up hit testing
-            this.setupHitTesting();
+            // Set up hit testing with error handling
+            try {
+                await this.setupHitTesting();
+            } catch (hitTestError) {
+                console.warn('Hit testing setup failed:', hitTestError);
+                // Continue without hit testing - some features will be limited
+            }
 
             // Start render loop
             this.renderer.setAnimationLoop((timestamp, frame) => {
@@ -130,20 +184,39 @@ export class ARSession {
             });
 
             this.isActive = true;
-            console.log('✅ AR session started');
+            console.log('✅ AR session started successfully');
             
         } catch (error) {
             console.error('❌ Failed to start AR session:', error);
-            throw error;
+            
+            // Provide specific error messages based on error type
+            if (error.message.includes('timeout') || error.message.includes('denied')) {
+                throw new Error('Camera access required for AR. Please allow camera permissions and try again.');
+            } else if (error.message.includes('NotAllowedError')) {
+                throw new Error('Camera access was denied. Please enable camera permissions in your browser settings.');
+            } else if (error.message.includes('NotFoundError')) {
+                throw new Error('No camera found on this device. AR requires a camera to function.');
+            } else if (error.message.includes('NotSupportedError')) {
+                throw new Error('AR features not supported on this device or browser.');
+            } else {
+                throw new Error(`AR session failed to start: ${error.message}`);
+            }
         }
     }
 
     /**
-     * Setup hit testing for surface detection
+     * Setup hit testing for surface detection with error handling
      */
     async setupHitTesting() {
-        const viewerSpace = await this.session.requestReferenceSpace('viewer');
-        this.hitTestSource = await this.session.requestHitTestSource({ space: viewerSpace });
+        try {
+            const viewerSpace = await this.session.requestReferenceSpace('viewer');
+            this.hitTestSource = await this.session.requestHitTestSource({ space: viewerSpace });
+            console.log('✅ Hit testing initialized');
+        } catch (error) {
+            console.warn('⚠️ Hit testing setup failed:', error);
+            // Hit testing is optional - app can work without it
+            this.hitTestSource = null;
+        }
     }
 
     /**
@@ -250,7 +323,7 @@ export class ARSession {
             const normalizedY = -(screenY / window.innerHeight) * 2 + 1;
 
             // Create ray for hit testing
-            const ray = new THREE.Ray();
+            const ray = new window.THREE.Ray();
             ray.origin.setFromMatrixPosition(this.camera.matrixWorld);
             ray.direction.set(normalizedX, normalizedY, 0.5).unproject(this.camera).sub(ray.origin).normalize();
 
@@ -262,8 +335,8 @@ export class ARSession {
                 const hitPose = hit.getPose(this.referenceSpace);
                 
                 if (hitPose) {
-                    const matrix = new THREE.Matrix4().fromArray(hitPose.transform.matrix);
-                    const position = new THREE.Vector3();
+                    const matrix = new window.THREE.Matrix4().fromArray(hitPose.transform.matrix);
+                    const position = new window.THREE.Vector3();
                     position.setFromMatrixPosition(matrix);
                     
                     return {
@@ -334,7 +407,7 @@ export class ARSession {
             return null;
         }
 
-        const position = new THREE.Vector3();
+        const position = new window.THREE.Vector3();
         position.setFromMatrixPosition(this.reticle.matrix);
         
         return {

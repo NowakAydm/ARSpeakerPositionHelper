@@ -1,9 +1,10 @@
 /**
  * Object Detection Module using TensorFlow.js
- * Detects speakers and box-like objects in AR camera feed
+ * Detects speakers and box-like objects in AR camera feed with robust error handling
  */
 
-import * as tf from '@tensorflow/tfjs';
+// Use global TensorFlow objects loaded from CDN
+/* global tf, cocoSsd */
 
 export class ObjectDetection {
     constructor() {
@@ -16,31 +17,45 @@ export class ObjectDetection {
     }
 
     /**
-     * Load TensorFlow.js object detection model
+     * Load TensorFlow.js object detection model with robust error handling
      */
     async loadModel() {
         try {
             console.log('🤖 Loading TensorFlow.js model...');
             
-            // Set backend to webgl for better performance
-            await tf.setBackend('webgl');
-            await tf.ready();
+            // Check if TensorFlow.js is available
+            if (!window.tf) {
+                throw new Error('TensorFlow.js not loaded. Please check your internet connection.');
+            }
+            
+            // Set backend to webgl for better performance, fallback to cpu
+            try {
+                await window.tf.setBackend('webgl');
+            } catch (webglError) {
+                console.warn('⚠️ WebGL backend not available, falling back to CPU:', webglError);
+                await window.tf.setBackend('cpu');
+            }
+            await window.tf.ready();
             
             // Load COCO-SSD model for object detection
-            const cocoSsd = await import('@tensorflow-models/coco-ssd');
-            this.model = await cocoSsd.load({
+            if (!window.cocoSsd) {
+                throw new Error('COCO-SSD model not loaded. Please check your internet connection.');
+            }
+            
+            this.model = await window.cocoSsd.load({
                 base: 'mobilenet_v2' // Optimized for mobile devices
             });
             
             this.isLoaded = true;
             console.log('✅ Object detection model loaded');
-            console.log('📊 TensorFlow.js backend:', tf.getBackend());
+            console.log('📊 TensorFlow.js backend:', window.tf.getBackend());
             
             return true;
             
         } catch (error) {
             console.error('❌ Failed to load detection model:', error);
-            throw error;
+            this.isLoaded = false;
+            throw new Error(`Object detection initialization failed: ${error.message}`);
         }
     }
 
