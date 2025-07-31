@@ -45,6 +45,41 @@
                 <button id="calibrate" class="secondary-button" disabled>
                     Calibrate Position
                 </button>
+                <button id="reset" class="secondary-button" disabled>
+                    Reset Session
+                </button>
+            </div>
+
+            <!-- Instructions Panel -->
+            <div id="instructions" class="instructions-panel">
+                <div class="instruction-step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Start AR Session</h3>
+                        <p>Click "Start AR Session" to begin and allow camera access</p>
+                    </div>
+                </div>
+                <div class="instruction-step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Position Speakers</h3>
+                        <p>Point camera at your speakers - the app will detect them automatically</p>
+                    </div>
+                </div>
+                <div class="instruction-step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Set Your Position</h3>
+                        <p>Tap on the floor where you want to sit to set your listening position</p>
+                    </div>
+                </div>
+                <div class="instruction-step" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Optimize Position</h3>
+                        <p>Follow the AR guidance to find the optimal listening triangle</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Status Display -->
@@ -61,7 +96,26 @@
                     <span class="status-label">Position:</span>
                     <span class="status-value" id="position-status">Not Set</span>
                 </div>
+                <div class="status-item">
+                    <span class="status-label">Triangle Quality:</span>
+                    <span class="status-value" id="triangle-quality">-</span>
+                </div>
             </div>
+
+            <!-- Performance Monitor -->
+            <div id="performance" class="performance-monitor hidden">
+                <div class="perf-item">
+                    <span class="perf-label">FPS:</span>
+                    <span class="perf-value" id="fps-counter">0</span>
+                </div>
+                <div class="perf-item">
+                    <span class="perf-label">Memory:</span>
+                    <span class="perf-value" id="memory-usage">0 MB</span>
+                </div>
+            </div>
+
+            <!-- Help Toggle -->
+            <button id="help-toggle" class="help-button" title="Toggle Instructions">?</button>
         </main>
 
         <!-- Footer -->
