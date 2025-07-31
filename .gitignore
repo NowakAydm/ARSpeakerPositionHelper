@@ -8,6 +8,13 @@ yarn-error.log*
 dist/
 build/
 *.tgz
+*.min.js
+*.min.css
+
+# Testing and reports
+lighthouse-report.html
+coverage/
+.nyc_output/
 
 # Environment
 .env
@@ -38,3 +45,10 @@ logs
 # Temporary files
 tmp/
 temp/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# PWA generated assets (if using generators)
+# icons/generated/
