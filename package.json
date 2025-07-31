@@ -1,0 +1,44 @@
+{
+  "name": "ar-speaker-position-helper",
+  "version": "1.0.0",
+  "description": "A mobile web app that uses AR to help position speakers and listeners for optimal audio experience",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "npx http-server . -p 8080 -c-1 --cors",
+    "start": "npm run dev",
+    "build": "echo 'Building for production...' && npm run lint",
+    "lint": "echo 'Linting JavaScript files...'",
+    "test": "echo 'No tests yet - run npm run dev to start development server'"
+  },
+  "keywords": [
+    "ar",
+    "webxr",
+    "audio",
+    "speakers",
+    "positioning",
+    "three.js",
+    "tensorflow.js",
+    "mobile"
+  ],
+  "author": "",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "three": "^0.158.0",
+    "@tensorflow/tfjs": "^4.15.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NowakAydm/ARSpeakerPositionHelper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NowakAydm/ARSpeakerPositionHelper/issues"
+  },
+  "homepage": "https://github.com/NowakAydm/ARSpeakerPositionHelper#readme"
+}
