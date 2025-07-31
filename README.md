@@ -57,9 +57,9 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 - [x] Listening position setting
 
 ### Phase 5: Triangle Guidance
-- [ ] Equilateral triangle calculation
-- [ ] Visual triangle overlay in AR
-- [ ] Real-time position adjustment feedback
+- [x] Equilateral triangle calculation
+- [x] Visual triangle overlay in AR
+- [x] Real-time position adjustment feedback
 
 ### Phase 6: UX Enhancement
 - [ ] Intuitive UI controls and instructions

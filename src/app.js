@@ -6,6 +6,7 @@
 import { ARSession } from './modules/ar-session.js';
 import { ObjectDetection } from './modules/detection.js';
 import { UserInteraction } from './modules/interaction.js';
+import { TriangleCalculator } from './modules/triangle.js';
 
 class ARSpeakerApp {
     constructor() {
@@ -13,6 +14,7 @@ class ARSpeakerApp {
         this.arSession = null;
         this.objectDetection = null;
         this.userInteraction = null;
+        this.triangleCalculator = null;
         this.speakers = [];
         this.userPosition = null;
         
@@ -29,6 +31,9 @@ class ARSpeakerApp {
             // Initialize object detection
             this.objectDetection = new ObjectDetection();
             await this.objectDetection.loadModel();
+            
+            // Initialize triangle calculator
+            this.triangleCalculator = new TriangleCalculator();
             
             // Check AR support
             await this.checkARSupport();
@@ -154,6 +159,12 @@ class ARSpeakerApp {
             // Start the AR session
             await this.arSession.start();
             
+            // Initialize triangle calculator with AR session
+            this.triangleCalculator.initialize(this.arSession);
+            
+            // Setup triangle guidance callbacks
+            this.setupTriangleGuidance();
+            
             // Setup user interaction
             this.setupUserInteraction();
             
@@ -186,6 +197,11 @@ class ARSpeakerApp {
             // Stop object detection
             if (this.objectDetection) {
                 this.objectDetection.stopDetection();
+            }
+            
+            // Cleanup triangle calculator
+            if (this.triangleCalculator) {
+                this.triangleCalculator.reset();
             }
             
             // Cleanup user interaction
@@ -276,12 +292,16 @@ class ARSpeakerApp {
             this.userPosition = world;
             this.updatePositionStatus('Set by tap');
             
+            // Update triangle calculator
+            if (this.triangleCalculator) {
+                this.triangleCalculator.setListenerPosition(this.userPosition);
+            }
+            
             console.log('👤 User position set by tap:', this.userPosition);
             
             // Update status with guidance
             if (this.speakers.length >= 2) {
                 this.calculateOptimalTriangle();
-                this.updateStatus('AR Active - Triangle calculated!');
             } else if (this.speakers.length === 1) {
                 this.updateStatus('AR Active - Need 1 more speaker');
             } else {
@@ -297,11 +317,54 @@ class ARSpeakerApp {
     calculateOptimalTriangle() {
         console.log('📐 Calculating optimal listening triangle...');
         
-        // Placeholder for triangle calculation
-        // In real implementation, this would:
-        // 1. Use speaker positions
-        // 2. Calculate equilateral triangle
-        // 3. Provide visual guidance
+        if (this.triangleCalculator && this.speakers.length >= 2 && this.userPosition) {
+            // Set speakers and listener position
+            this.triangleCalculator.setSpeakers(this.speakers);
+            this.triangleCalculator.setListenerPosition(this.userPosition);
+            
+            // Get triangle quality for UI update
+            const quality = this.triangleCalculator.getTriangleQuality();
+            const guidance = this.triangleCalculator.getPositioningGuidance();
+            
+            console.log(`📐 Triangle quality: ${quality}%`);
+            console.log('🧭 Guidance:', guidance.message);
+        }
+    }
+
+    /**
+     * Setup triangle guidance callbacks
+     */
+    setupTriangleGuidance() {
+        if (!this.triangleCalculator) return;
+        
+        this.triangleCalculator.onGuidanceUpdate((updateData) => {
+            this.handleTriangleGuidanceUpdate(updateData);
+        });
+        
+        console.log('📐 Triangle guidance setup complete');
+    }
+
+    /**
+     * Handle triangle guidance updates
+     */
+    handleTriangleGuidanceUpdate(updateData) {
+        const { guidance, quality, isOptimal } = updateData;
+        
+        // Update status with guidance
+        if (guidance.type === 'success') {
+            this.updateStatus(`AR Active - ${guidance.message} Quality: ${quality}%`);
+        } else if (guidance.type === 'guidance') {
+            this.updateStatus(`AR Active - ${guidance.message}`);
+        }
+        
+        // Update position status with quality indicator
+        if (isOptimal) {
+            this.updatePositionStatus(`Optimal! (${quality}%)`);
+        } else if (quality > 0) {
+            this.updatePositionStatus(`${quality}% optimal`);
+        }
+        
+        console.log(`📐 Triangle guidance: ${guidance.message} (Quality: ${quality}%)`);
     }
 
     /**
@@ -334,6 +397,11 @@ class ARSpeakerApp {
         
         // Update speaker list
         this.speakers = speakers;
+        
+        // Update triangle calculator with new speakers
+        if (this.triangleCalculator && speakerCount >= 2) {
+            this.triangleCalculator.setSpeakers(this.speakers);
+        }
         
         // Update UI
         this.updateSpeakerCount(speakerCount);
