@@ -49,6 +49,7 @@ temp/
 # Cache directories
 .cache/
 .parcel-cache/
+.turbo/
 
 # PWA generated assets (if using generators)
 # icons/generated/

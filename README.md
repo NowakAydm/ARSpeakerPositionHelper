@@ -20,17 +20,23 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 
 ### Project Structure
 ```
-├── src/
-│   ├── app.js              # Main application entry point
-│   ├── styles.css          # Mobile-responsive styles
-│   ├── modules/
-│   │   ├── ar-session.js   # WebXR AR session management
-│   │   ├── detection.js    # TensorFlow.js object detection
-│   │   ├── interaction.js  # User input and touch handling
-│   │   └── triangle.js     # Equilateral triangle calculations
-├── index.html              # Main HTML entry point
-├── package.json            # Dependencies and scripts
-└── README.md              # This file
+├── apps/
+│   └── web/                 # Main AR web application
+│       ├── src/
+│       │   ├── app.js       # Main application entry point
+│       │   ├── styles.css   # Mobile-responsive styles
+│       │   └── modules/
+│       │       ├── ar-session.js   # WebXR AR session management
+│       │       ├── detection.js    # TensorFlow.js object detection
+│       │       ├── interaction.js  # User input and touch handling
+│       │       └── triangle.js     # Equilateral triangle calculations
+│       ├── index.html       # Main HTML entry point
+│       ├── manifest.json    # PWA manifest
+│       └── package.json     # App dependencies
+├── packages/                # Shared packages (future expansion)
+├── turbo.json              # Turborepo configuration
+├── package.json            # Root workspace configuration
+└── README.md               # This file
 ```
 
 ## Development Roadmap
@@ -85,7 +91,7 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 
 3. **Start with HTTPS (required for AR)**:
    ```bash
-   npm run start:https
+   cd apps/web && npm run start:https
    ```
 
 4. **Build for production**:
@@ -95,12 +101,101 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 
 5. **Deploy to production**:
    ```bash
+   # Render.com (recommended)
+   npm run deploy:render
+   
    # Netlify
    npm run deploy:netlify
    
    # Vercel
    npm run deploy:vercel
    ```
+
+## Render.com Deployment
+
+This project is optimized for deployment on Render.com's free tier. Follow these steps for deployment:
+
+### Render.com Static Site Configuration
+
+1. **Connect your GitHub repository** to Render.com
+2. **Create a new Static Site** with the following configuration:
+
+| Setting | Value |
+|---------|-------|
+| **Build Command** | `npm install && npm run build` |
+| **Publish Directory** | `apps/web/dist` |
+| **Node Version** | `18` |
+
+### Environment Variables
+
+No environment variables are required for basic functionality. All configuration is handled client-side.
+
+### Advanced Configuration (Optional)
+
+For custom domain and enhanced features:
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `NODE_ENV` | Environment mode | `production` |
+| `PORT` | Server port (for static sites, this is handled by Render) | `8080` |
+
+### Deployment Steps
+
+1. **Fork or clone** this repository to your GitHub account
+2. **Connect to Render.com**:
+   - Go to [Render.com](https://render.com)
+   - Click "New +" → "Static Site"
+   - Connect your GitHub repository
+3. **Configure the deployment**:
+   - **Repository**: Select your forked repository
+   - **Branch**: `main` (or your deployment branch)
+   - **Build Command**: `npm install && npm run build`
+   - **Publish Directory**: `apps/web/dist`
+4. **Deploy**: Click "Create Static Site"
+
+### Automatic Deployments
+
+Render.com will automatically deploy when you push to your connected branch. The build process:
+
+1. Installs dependencies using `npm install`
+2. Runs the build command via Turborepo: `npm run build`
+3. Copies built files to the publish directory: `apps/web/dist`
+4. Serves the static files with HTTPS (required for AR functionality)
+
+### Troubleshooting Render.com Deployment
+
+- **Build fails**: Ensure Node.js version is set to 18 or higher
+- **AR not working**: Verify the site is served over HTTPS (Render provides this automatically)
+- **Performance issues**: Enable caching headers in Render dashboard settings
+- **Assets not loading**: Check that all paths are relative in the built files
+
+## Turborepo Integration
+
+This project uses [Turborepo](https://turbo.build/) for optimized builds and task execution:
+
+### Benefits
+- **Parallel task execution**: Build, lint, and test tasks run in parallel when possible
+- **Intelligent caching**: Turbo caches task outputs and skips work when inputs haven't changed
+- **Optimized for CI/CD**: Faster builds in deployment environments like Render.com
+
+### Commands
+- `npm run dev` - Start development servers for all apps
+- `npm run build` - Build all apps for production
+- `npm run lint` - Lint all code
+- `npm run test` - Run all tests
+- `npm run clean` - Clean all build artifacts
+
+### Monorepo Structure
+```
+├── apps/
+│   └── web/                 # Main AR web application
+│       ├── src/             # Application source code
+│       ├── dist/            # Built files (generated)
+│       └── package.json     # App-specific dependencies
+├── packages/                # Shared packages (future expansion)
+├── turbo.json              # Turborepo configuration
+└── package.json            # Root workspace configuration
+```
 
 ## Testing & Validation
 

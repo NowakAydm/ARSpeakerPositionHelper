@@ -23,11 +23,68 @@ live-server --https=path/to/cert --https-module=spdy
 ### Production Hosting
 
 Recommended platforms that provide HTTPS by default:
-- **Netlify**: Drag and drop deployment with automatic HTTPS
+- **Render.com**: Modern platform with free tier and automatic HTTPS ⭐ **RECOMMENDED**
+- **Netlify**: Drag and drop deployment with automatic HTTPS  
 - **Vercel**: Git-based deployment with edge network
 - **GitHub Pages**: With custom domain and SSL
 - **Firebase Hosting**: Google's hosting with global CDN
 - **AWS S3 + CloudFront**: Enterprise-grade with custom configuration
+
+## Render.com Deployment (Recommended)
+
+Render.com offers the best free tier for static sites with automatic HTTPS, global CDN, and excellent performance.
+
+### Quick Start with Render.com
+
+1. **Fork this repository** to your GitHub account
+
+2. **Connect to Render.com**:
+   - Visit [render.com](https://render.com) and sign up
+   - Click "New +" → "Static Site"
+   - Connect your GitHub account
+   - Select your forked repository
+
+3. **Configure deployment**:
+   | Setting | Value |
+   |---------|-------|
+   | **Name** | ar-speaker-position-helper |
+   | **Branch** | main |
+   | **Build Command** | `npm install && npm run build` |
+   | **Publish Directory** | `apps/web/dist` |
+   | **Node Version** | 18 |
+
+4. **Deploy**: Click "Create Static Site"
+
+### Using render.yaml (Advanced)
+
+For advanced configuration, this repository includes a `render.yaml` file:
+
+```yaml
+services:
+  - type: web
+    name: ar-speaker-position-helper
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./apps/web/dist
+```
+
+### Environment Variables for Render.com
+
+No environment variables are required for basic functionality. For advanced features:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NODE_ENV` | Environment mode | `production` |
+| `SKIP_PREFLIGHT_CHECK` | Skip build checks | `true` |
+
+### Render.com Benefits
+
+- ✅ **Free SSL/HTTPS** - Required for AR functionality
+- ✅ **Global CDN** - Fast loading worldwide
+- ✅ **Automatic deploys** - Deploy on git push
+- ✅ **Build caching** - Faster subsequent builds
+- ✅ **Custom domains** - Free SSL for custom domains
+- ✅ **Performance monitoring** - Built-in analytics
 
 ### Deployment Steps
 
