@@ -5,12 +5,14 @@
 
 import { ARSession } from './modules/ar-session.js';
 import { ObjectDetection } from './modules/detection.js';
+import { UserInteraction } from './modules/interaction.js';
 
 class ARSpeakerApp {
     constructor() {
         this.isARSupported = false;
         this.arSession = null;
         this.objectDetection = null;
+        this.userInteraction = null;
         this.speakers = [];
         this.userPosition = null;
         
@@ -152,6 +154,9 @@ class ARSpeakerApp {
             // Start the AR session
             await this.arSession.start();
             
+            // Setup user interaction
+            this.setupUserInteraction();
+            
             // Setup object detection integration
             this.setupObjectDetection();
             
@@ -160,9 +165,9 @@ class ARSpeakerApp {
             this.elements.startButton.disabled = false;
             this.elements.calibrateButton.disabled = false;
             
-            this.updateStatus('AR Active - Looking for speakers...');
+            this.updateStatus('AR Active - Tap to set position');
             this.updateSpeakerCount(0);
-            this.updatePositionStatus('Not Set');
+            this.updatePositionStatus('Tap screen to set');
             
             console.log('✅ AR session started');
             
@@ -183,6 +188,12 @@ class ARSpeakerApp {
                 this.objectDetection.stopDetection();
             }
             
+            // Cleanup user interaction
+            if (this.userInteraction) {
+                this.userInteraction.destroy();
+                this.userInteraction = null;
+            }
+            
             // Cleanup AR session
             if (this.arSession) {
                 await this.arSession.stop();
@@ -191,6 +202,7 @@ class ARSpeakerApp {
             
             // Clear detected speakers
             this.speakers = [];
+            this.userPosition = null;
             
             // Reset UI
             this.elements.startButton.textContent = 'Start AR Session';
@@ -231,6 +243,54 @@ class ARSpeakerApp {
         // Enable triangle calculation if we have speakers
         if (this.speakers.length >= 2) {
             this.calculateOptimalTriangle();
+        }
+    }
+
+    /**
+     * Setup user interaction for touch controls
+     */
+    setupUserInteraction() {
+        if (!this.userInteraction) {
+            this.userInteraction = new UserInteraction();
+        }
+        
+        // Initialize with AR container and session
+        this.userInteraction.initialize(this.elements.arContainer, this.arSession);
+        
+        // Listen for tap events to set user position
+        this.userInteraction.on('tap', (tapData) => {
+            this.handleUserTap(tapData);
+        });
+        
+        console.log('👆 User interaction setup complete');
+    }
+
+    /**
+     * Handle user tap for position setting
+     */
+    handleUserTap(tapData) {
+        const { world, hasValidTarget, marker } = tapData;
+        
+        if (hasValidTarget && world) {
+            // Set user position from tap
+            this.userPosition = world;
+            this.updatePositionStatus('Set by tap');
+            
+            console.log('👤 User position set by tap:', this.userPosition);
+            
+            // Update status with guidance
+            if (this.speakers.length >= 2) {
+                this.calculateOptimalTriangle();
+                this.updateStatus('AR Active - Triangle calculated!');
+            } else if (this.speakers.length === 1) {
+                this.updateStatus('AR Active - Need 1 more speaker');
+            } else {
+                this.updateStatus('AR Active - Looking for speakers...');
+            }
+            
+        } else {
+            console.log('❌ Invalid tap target - no surface detected');
+            this.updateStatus('AR Active - Tap on a surface');
         }
     }
 
@@ -279,14 +339,20 @@ class ARSpeakerApp {
         this.updateSpeakerCount(speakerCount);
         
         if (speakerCount > 0) {
-            this.updateStatus(`AR Active - ${speakerCount} speaker(s) detected`);
+            const statusMsg = this.userPosition 
+                ? `AR Active - ${speakerCount} speaker(s), position set`
+                : `AR Active - ${speakerCount} speaker(s), tap to set position`;
+            this.updateStatus(statusMsg);
             
             // If we have user position and at least 2 speakers, calculate triangle
             if (this.userPosition && speakerCount >= 2) {
                 this.calculateOptimalTriangle();
             }
         } else {
-            this.updateStatus('AR Active - Looking for speakers...');
+            const statusMsg = this.userPosition 
+                ? 'AR Active - Position set, looking for speakers...'
+                : 'AR Active - Tap to set position, looking for speakers...';
+            this.updateStatus(statusMsg);
         }
         
         console.log(`🔊 Detected ${speakerCount} speakers:`, speakers);

@@ -52,9 +52,9 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 - [x] AR space mapping for detected objects
 
 ### Phase 4: User Interaction
-- [ ] Touch interaction in AR space
-- [ ] Visual feedback for marker placement
-- [ ] Listening position setting
+- [x] Touch interaction in AR space
+- [x] Visual feedback for marker placement
+- [x] Listening position setting
 
 ### Phase 5: Triangle Guidance
 - [ ] Equilateral triangle calculation
