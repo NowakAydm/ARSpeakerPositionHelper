@@ -1,9 +1,10 @@
 /**
  * User Interaction Module
- * Handles touch input and AR space interaction
+ * Handles touch input and AR space interaction with robust error handling
  */
 
-import * as THREE from 'three';
+// Use global THREE object loaded from CDN
+/* global THREE */
 
 export class UserInteraction {
     constructor() {

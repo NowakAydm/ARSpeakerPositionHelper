@@ -21,34 +21,64 @@ class ARSpeakerApp {
         this.init();
     }
 
+    /**
+     * Initialize the application with comprehensive error handling
+     * Ensures proper user feedback even when components fail to load
+     */
     async init() {
         console.log('🚀 Initializing AR Speaker Position Helper');
         
         try {
-            // Initialize UI elements
+            // Initialize UI elements first - this should always work
             this.initializeUI();
             
-            // Initialize object detection
-            this.objectDetection = new ObjectDetection();
-            await this.objectDetection.loadModel();
+            // Initialize object detection with error handling
+            try {
+                this.objectDetection = new ObjectDetection();
+                await this.objectDetection.loadModel();
+                console.log('✅ Object detection initialized');
+            } catch (detectionError) {
+                console.warn('⚠️ Object detection failed to initialize:', detectionError);
+                // Continue without object detection - it's not critical for basic functionality
+                this.objectDetection = null;
+            }
             
             // Initialize triangle calculator
             this.triangleCalculator = new TriangleCalculator();
             
-            // Check AR support
+            // Check AR support with comprehensive error handling
             await this.checkARSupport();
             
             // Setup event listeners
             this.setupEventListeners();
             
-            // Hide loading overlay
-            this.hideLoading();
-            
             console.log('✅ Application initialized successfully');
             
         } catch (error) {
             console.error('❌ Failed to initialize application:', error);
-            this.showError('Failed to initialize AR capabilities. Please ensure you\'re using HTTPS and a compatible browser.');
+            // Show user-friendly error message instead of technical details
+            const userMessage = this.getUserFriendlyErrorMessage(error);
+            this.showError(userMessage);
+        } finally {
+            // Always hide loading overlay, regardless of success or failure
+            this.hideLoading();
+        }
+    }
+    
+    /**
+     * Convert technical errors to user-friendly messages
+     */
+    getUserFriendlyErrorMessage(error) {
+        if (error.message.includes('WebXR')) {
+            return 'Your browser doesn\'t support AR features. Please try using Chrome, Edge, or Samsung Internet on a mobile device.';
+        } else if (error.message.includes('TensorFlow') || error.message.includes('detection')) {
+            return 'Unable to load object detection capabilities. The app may still work for basic AR functionality with manual speaker placement.';
+        } else if (error.message.includes('connection') || error.message.includes('network')) {
+            return 'Network connection issue. Please check your internet connection and try again.';
+        } else if (error.message.includes('HTTPS') || error.message.includes('secure')) {
+            return 'AR requires a secure connection (HTTPS). Please access this app over HTTPS.';
+        } else {
+            return 'Failed to initialize AR capabilities. Please ensure you\'re using a compatible browser with camera access and try again.';
         }
     }
 
@@ -91,37 +121,89 @@ class ARSpeakerApp {
         this.setupUIInteractions();
     }
 
+    /**
+     * Robust AR support detection with comprehensive error handling
+     * Provides clear user feedback for unsupported browsers and devices
+     */
     async checkARSupport() {
         this.updateStatus('Checking AR support...');
         
-        // Check if browser supports WebXR
-        if (!navigator.xr) {
-            this.isARSupported = false;
-            this.updateStatus('WebXR not supported');
-            throw new Error('WebXR not supported in this browser');
-        }
-
         try {
-            // Check if immersive AR is supported
-            const supported = await navigator.xr.isSessionSupported('immersive-ar');
-            this.isARSupported = supported;
+            // First check if WebXR is available in the browser
+            if (!navigator.xr) {
+                this.isARSupported = false;
+                this.updateStatus('WebXR not supported');
+                this.showARUnsupportedMessage('WebXR API not available in this browser');
+                return;
+            }
+
+            // Check if immersive AR sessions are supported
+            let isSupported = false;
+            try {
+                isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+            } catch (sessionError) {
+                console.warn('AR session support check failed:', sessionError);
+                this.isARSupported = false;
+                this.updateStatus('AR support check failed');
+                this.showARUnsupportedMessage('Unable to determine AR capabilities on this device');
+                return;
+            }
             
-            if (supported) {
+            this.isARSupported = isSupported;
+            
+            if (isSupported) {
                 this.updateStatus('AR Ready');
                 this.elements.startButton.disabled = false;
                 this.elements.startButton.textContent = 'Start AR Session';
+                console.log('✅ AR support confirmed');
             } else {
                 this.updateStatus('AR not available');
-                this.elements.startButton.textContent = 'AR Not Available';
+                this.showARUnsupportedMessage('AR sessions not supported on this device');
             }
             
         } catch (error) {
-            console.warn('AR support check failed:', error);
+            console.error('❌ AR support check failed:', error);
             this.isARSupported = false;
             this.updateStatus('AR support unknown');
-            this.elements.startButton.disabled = false;
-            this.elements.startButton.textContent = 'Try AR Session';
+            this.showARUnsupportedMessage('Failed to check AR capabilities');
         }
+    }
+    
+    /**
+     * Show user-friendly message when AR is not supported
+     */
+    showARUnsupportedMessage(reason) {
+        const browserInfo = this.detectBrowser();
+        let message = `AR functionality is not available.\n\nReason: ${reason}`;
+        
+        // Add browser-specific guidance
+        if (browserInfo.isFirefox) {
+            message += '\n\nFor Firefox users:\n• AR support is experimental\n• Try Chrome or Edge for better AR support\n• On Android, use Chrome or Samsung Internet';
+        } else if (browserInfo.isSafari) {
+            message += '\n\nFor Safari users:\n• WebXR is not yet supported\n• Try Chrome or Edge on Android\n• iOS AR apps require native development';
+        } else if (browserInfo.isChrome && !browserInfo.isMobile) {
+            message += '\n\nFor desktop Chrome:\n• AR requires a mobile device with camera\n• Try accessing this app on your phone\n• Ensure HTTPS connection';
+        } else {
+            message += '\n\nFor best AR support:\n• Use Chrome, Edge, or Samsung Internet on Android\n• Ensure camera permissions are granted\n• Use HTTPS connection';
+        }
+        
+        this.elements.startButton.textContent = 'AR Not Available';
+        this.elements.startButton.disabled = true;
+        this.showError(message);
+    }
+    
+    /**
+     * Detect browser type for providing specific guidance
+     */
+    detectBrowser() {
+        const userAgent = navigator.userAgent;
+        return {
+            isFirefox: userAgent.includes('Firefox'),
+            isChrome: userAgent.includes('Chrome') && !userAgent.includes('Edge'),
+            isEdge: userAgent.includes('Edge'),
+            isSafari: userAgent.includes('Safari') && !userAgent.includes('Chrome'),
+            isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+        };
     }
 
     setupEventListeners() {
@@ -182,9 +264,12 @@ class ARSpeakerApp {
         });
     }
 
+    /**
+     * Start AR session with comprehensive error handling and user feedback
+     */
     async startARSession() {
         if (!this.isARSupported) {
-            this.showError('AR is not supported on this device or browser.');
+            this.showARUnsupportedMessage('AR functionality is not available on this device or browser');
             return;
         }
 
@@ -211,8 +296,12 @@ class ARSpeakerApp {
             // Setup user interaction
             this.setupUserInteraction();
             
-            // Setup object detection integration
-            this.setupObjectDetection();
+            // Setup object detection integration (only if available)
+            if (this.objectDetection) {
+                this.setupObjectDetection();
+            } else {
+                console.log('ℹ️ Object detection not available - manual speaker placement only');
+            }
             
             // Start performance monitoring if enabled
             if (this.performanceMonitorEnabled) {
