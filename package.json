@@ -2,14 +2,21 @@
   "name": "ar-speaker-position-helper",
   "version": "1.0.0",
   "description": "A mobile web app that uses AR to help position speakers and listeners for optimal audio experience",
-  "main": "src/app.js",
-  "type": "module",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "npx http-server . -p 8080 -c-1 --cors",
-    "start": "npm run dev",
-    "build": "echo 'Building for production...' && npm run lint",
-    "lint": "echo 'Linting JavaScript files...'",
-    "test": "echo 'No tests yet - run npm run dev to start development server'"
+    "dev": "turbo run dev",
+    "start": "turbo run start",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "deploy:render": "cd apps/web && npm run build",
+    "deploy:netlify": "turbo run build && npx netlify deploy --prod --dir=apps/web/dist",
+    "deploy:vercel": "turbo run build && npx vercel --prod apps/web/dist"
   },
   "keywords": [
     "ar",
@@ -19,16 +26,14 @@
     "positioning",
     "three.js",
     "tensorflow.js",
-    "mobile"
+    "mobile",
+    "turborepo",
+    "monorepo"
   ],
   "author": "",
   "license": "GPL-3.0",
-  "dependencies": {
-    "three": "^0.158.0",
-    "@tensorflow/tfjs": "^4.15.0"
-  },
   "devDependencies": {
-    "http-server": "^14.1.1"
+    "turbo": "^1.13.4"
   },
   "engines": {
     "node": ">=16.0.0"
