@@ -3,6 +3,8 @@
  * Main application entry point
  */
 
+import { ARSession } from './modules/ar-session.js';
+
 class ARSpeakerApp {
     constructor() {
         this.isARSupported = false;
@@ -135,14 +137,16 @@ class ARSpeakerApp {
             this.updateStatus('Starting AR session...');
             this.elements.startButton.disabled = true;
             
-            // This is a placeholder for actual WebXR implementation
-            console.log('🔄 Starting AR session...');
+            // Initialize AR session if not already done
+            if (!this.arSession) {
+                this.arSession = new ARSession();
+                await this.arSession.initialize(this.elements.arContainer);
+            }
             
-            // Simulate AR session startup
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Start the AR session
+            await this.arSession.start();
             
             // Update UI for active session
-            this.arSession = { active: true }; // Placeholder session object
             this.elements.startButton.textContent = 'Stop AR Session';
             this.elements.startButton.disabled = false;
             this.elements.calibrateButton.disabled = false;
@@ -155,8 +159,9 @@ class ARSpeakerApp {
             
         } catch (error) {
             console.error('❌ Failed to start AR session:', error);
-            this.showError('Failed to start AR session. Please check camera permissions.');
+            this.showError(`Failed to start AR session: ${error.message}. Please check camera permissions and ensure you're using HTTPS.`);
             this.elements.startButton.disabled = false;
+            this.arSession = null;
         }
     }
 
@@ -166,6 +171,7 @@ class ARSpeakerApp {
             
             // Cleanup AR session
             if (this.arSession) {
+                await this.arSession.stop();
                 this.arSession = null;
             }
             
@@ -185,16 +191,25 @@ class ARSpeakerApp {
     }
 
     calibratePosition() {
-        if (!this.arSession) {
+        if (!this.arSession || !this.arSession.isActive) {
             this.showError('Please start AR session first.');
             return;
         }
 
         console.log('🎯 Calibrating user position...');
         
-        // Placeholder for actual calibration logic
-        this.userPosition = { x: 0, y: 0, z: 0 };
-        this.updatePositionStatus('Calibrated');
+        // Get current reticle position for user calibration
+        const reticlePosition = this.arSession.getReticlePosition();
+        
+        if (reticlePosition) {
+            this.userPosition = reticlePosition;
+            this.updatePositionStatus('Calibrated');
+            console.log('📍 User position set:', this.userPosition);
+        } else {
+            this.userPosition = this.arSession.getCameraPose().position;
+            this.updatePositionStatus('Camera Position');
+            console.log('📱 Using camera position as fallback:', this.userPosition);
+        }
         
         // Enable triangle calculation if we have speakers
         if (this.speakers.length >= 2) {

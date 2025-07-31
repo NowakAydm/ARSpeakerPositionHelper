@@ -42,9 +42,9 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 - [x] package.json with dependencies
 
 ### Phase 2: AR Foundation
-- [ ] WebXR AR session boilerplate
-- [ ] Basic AR camera feed with three.js scene rendering
-- [ ] AR coordinate system setup
+- [x] WebXR AR session boilerplate
+- [x] Basic AR camera feed with three.js scene rendering
+- [x] AR coordinate system setup
 
 ### Phase 3: Object Detection
 - [ ] TensorFlow.js integration
