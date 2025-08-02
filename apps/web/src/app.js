@@ -218,9 +218,9 @@ class ARSpeakerApp {
                 this.debugInfo('🔘 Start button clicked');
                 
                 if (this.isSessionActive) {
-                    this.stopManualSession();
+                    this.stopCameraSession();
                 } else {
-                    this.startManualSession();
+                    this.startCameraSession();
                 }
             });
         }
@@ -269,14 +269,14 @@ class ARSpeakerApp {
     enableInitialButtons() {
         if (this.elements.startButton) {
             this.elements.startButton.disabled = false;
-            this.elements.startButton.textContent = 'Start Manual Mode';
+            this.elements.startButton.textContent = 'Start Camera Session';
         }
         
         if (this.elements.resetButton) {
             this.elements.resetButton.disabled = false;
         }
         
-        this.updateStatus('Ready - Manual speaker positioning mode');
+        this.updateStatus('Ready - Click to start camera session');
         this.debugSuccess('✅ Initial buttons enabled');
     }
 
@@ -343,6 +343,100 @@ class ARSpeakerApp {
         } catch (error) {
             this.debugError(`Failed to stop manual session: ${error.message}`);
             this.showError('Failed to stop manual session');
+        }
+    }
+
+    /**
+     * Start camera session
+     */
+    async startCameraSession() {
+        this.debugInfo('🚀 Starting camera session');
+        
+        try {
+            // Check if camera session is available
+            if (!this.cameraSession) {
+                this.debugError('Camera session not initialized');
+                this.showError('Camera session not available. Please refresh and try again.');
+                return;
+            }
+
+            // Initialize camera session with container
+            await this.cameraSession.initialize(this.elements.arContainer);
+            this.debugSuccess('✅ Camera session initialized');
+
+            // Start the camera
+            await this.cameraSession.start();
+            this.debugSuccess('✅ Camera started successfully');
+
+            this.isSessionActive = true;
+            
+            // Update UI
+            this.elements.startButton.textContent = 'Stop Camera Session';
+            if (this.elements.calibrateButton) {
+                this.elements.calibrateButton.disabled = false;
+            }
+            
+            // Reset data
+            this.speakers = [];
+            this.userPosition = null;
+            
+            this.updateStatus('Camera Active - Point camera at speakers');
+            this.updateSpeakerCount(0);
+            this.updatePositionStatus('Not Set');
+            this.updateTriangleQuality('-');
+            this.updateInstructionStep(2);
+            
+            this.debugSuccess('✅ Camera session started successfully');
+            
+        } catch (error) {
+            this.debugError(`Failed to start camera session: ${error.message}`);
+            this.showError(`Camera session failed: ${error.message}`);
+            
+            // Reset UI on failure
+            this.isSessionActive = false;
+            this.elements.startButton.textContent = 'Start Camera Session';
+            if (this.elements.calibrateButton) {
+                this.elements.calibrateButton.disabled = true;
+            }
+        }
+    }
+
+    /**
+     * Stop camera session
+     */
+    async stopCameraSession() {
+        this.debugInfo('🛑 Stopping camera session');
+        
+        try {
+            // Stop the camera session
+            if (this.cameraSession) {
+                this.cameraSession.stop();
+                this.debugSuccess('✅ Camera session stopped');
+            }
+
+            this.isSessionActive = false;
+            
+            // Reset data
+            this.speakers = [];
+            this.userPosition = null;
+            
+            // Update UI
+            this.elements.startButton.textContent = 'Start Camera Session';
+            if (this.elements.calibrateButton) {
+                this.elements.calibrateButton.disabled = true;
+            }
+            
+            this.updateStatus('Ready - Click to start camera session');
+            this.updateSpeakerCount(0);
+            this.updatePositionStatus('Not Set');
+            this.updateTriangleQuality('-');
+            this.updateInstructionStep(1);
+            
+            this.debugSuccess('✅ Camera session stopped successfully');
+            
+        } catch (error) {
+            this.debugError(`Failed to stop camera session: ${error.message}`);
+            this.showError('Failed to stop camera session');
         }
     }
 
