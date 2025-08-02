@@ -149,24 +149,6 @@ html, body {
     cursor: not-allowed;
 }
 
-.debug-button {
-    background: linear-gradient(135deg, #ff6b00 0%, #cc5500 100%);
-    color: white;
-    border: none;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 80px;
-    flex: 0 0 auto;
-}
-
-.debug-button:hover {
-    background: linear-gradient(135deg, #ff7f1a 0%, #e55f00 100%);
-    transform: translateY(-1px);
-}
-
 /* Instructions Panel */
 .instructions-panel {
     background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
@@ -257,42 +239,6 @@ html, body {
 .help-button:hover {
     background: rgba(0, 123, 255, 1);
     transform: scale(1.1);
-}
-
-/* Performance Monitor */
-.performance-monitor {
-    position: fixed;
-    top: 4rem;
-    right: 1rem;
-    background: rgba(0, 0, 0, 0.8);
-    border-radius: 8px;
-    padding: 0.5rem;
-    z-index: 99;
-    backdrop-filter: blur(10px);
-    border: 1px solid #444;
-}
-
-.perf-item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.25rem;
-    font-size: 0.7rem;
-}
-
-.perf-item:last-child {
-    margin-bottom: 0;
-}
-
-.perf-label {
-    color: #ccc;
-    margin-right: 0.5rem;
-}
-
-.perf-value {
-    color: #fff;
-    font-weight: bold;
-    min-width: 40px;
-    text-align: right;
 }
 
 /* Status Display */
@@ -516,19 +462,20 @@ html, body {
     font-weight: bold;
 }
 
-.debug-close {
+.debug-close, .debug-clear {
     background: none;
     border: none;
     color: #888;
     cursor: pointer;
-    font-size: 1.2rem;
-    padding: 0;
-    width: 20px;
-    height: 20px;
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    margin-left: 0.5rem;
+    border-radius: 3px;
 }
 
-.debug-close:hover {
+.debug-close:hover, .debug-clear:hover {
     color: #fff;
+    background: #333;
 }
 
 .debug-content {

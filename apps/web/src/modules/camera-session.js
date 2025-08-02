@@ -26,12 +26,17 @@ export class CameraSession {
      * Initialize camera session with getUserMedia
      */
     async initialize(container) {
-        console.log('🔄 Initializing camera session...');
+        // Use global debug logger if available, fallback to console
+        const log = window.appDebugInfo || console.log;
+        const error = window.appDebugError || console.error;
+        
+        log('🔄 Initializing camera session...');
         
         this.container = container;
         
         // Check camera support
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            error('Camera access not supported in this browser');
             throw new Error('Camera access not supported in this browser');
         }
 
@@ -39,10 +44,12 @@ export class CameraSession {
         try {
             this.setupThreeJS();
         } catch (threeError) {
+            error(`3D graphics initialization failed: ${threeError.message}`);
             throw new Error(`3D graphics initialization failed: ${threeError.message}`);
         }
         
-        console.log('✅ Camera session initialized');
+        const success = window.appDebugSuccess || console.log;
+        success('✅ Camera session initialized');
         return true;
     }
 
@@ -50,9 +57,14 @@ export class CameraSession {
      * Setup Three.js scene for camera overlay
      */
     setupThreeJS() {
+        const log = window.appDebugInfo || console.log;
+        const error = window.appDebugError || console.error;
+        const success = window.appDebugSuccess || console.log;
+        
         try {
             // Check if THREE.js is available
             if (!window.THREE) {
+                error('THREE.js library not loaded');
                 throw new Error('THREE.js library not loaded');
             }
 
@@ -131,10 +143,10 @@ export class CameraSession {
             // Setup device orientation controls if available
             this.setupOrientationControls();
             
-            console.log('✅ Three.js scene setup complete');
+            success('✅ Three.js scene setup complete');
             
         } catch (error) {
-            console.error('❌ Three.js setup failed:', error);
+            error(`❌ Three.js setup failed: ${error.message}`);
             throw error;
         }
     }
@@ -204,7 +216,11 @@ export class CameraSession {
      * Start camera session
      */
     async start() {
-        console.log('▶️ Starting camera session...');
+        const log = window.appDebugInfo || console.log;
+        const error = window.appDebugError || console.error;
+        const success = window.appDebugSuccess || console.log;
+        
+        log('▶️ Starting camera session...');
         
         try {
             // Request camera access
@@ -259,7 +275,7 @@ export class CameraSession {
             this.setupCameraBackground();
 
             // Add debug info
-            console.log('📹 Video element created:', {
+            log('📹 Video element created:', {
                 videoWidth: this.video.videoWidth,
                 videoHeight: this.video.videoHeight,
                 readyState: this.video.readyState
@@ -273,10 +289,10 @@ export class CameraSession {
 
             this.isActive = true;
             this.showStatusMessage('✅ Camera session ready!');
-            console.log('✅ Camera session started successfully');
+            success('✅ Camera session started successfully');
             
         } catch (error) {
-            console.error('❌ Failed to start camera session:', error);
+            error(`❌ Failed to start camera session: ${error.message}`);
             this.showStatusMessage(`❌ Camera error: ${error.message}`, 'error');
             
             // Provide specific error messages
@@ -392,7 +408,10 @@ export class CameraSession {
      * Stop camera session
      */
     stop() {
-        console.log('⏹️ Stopping camera session...');
+        const log = window.appDebugInfo || console.log;
+        const success = window.appDebugSuccess || console.log;
+        
+        log('⏹️ Stopping camera session...');
         
         this.isActive = false;
 
@@ -429,7 +448,7 @@ export class CameraSession {
             `;
         }
 
-        console.log('✅ Camera session stopped');
+        success('✅ Camera session stopped');
     }
 
     /**

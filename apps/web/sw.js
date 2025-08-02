@@ -3,9 +3,9 @@
  * Provides offline capability and caching
  */
 
-const CACHE_NAME = 'ar-speaker-v1.0.0';
-const STATIC_CACHE_NAME = 'ar-speaker-static-v1.0.0';
-const DYNAMIC_CACHE_NAME = 'ar-speaker-dynamic-v1.0.0';
+const CACHE_NAME = 'ar-speaker-v1.0.1';
+const STATIC_CACHE_NAME = 'ar-speaker-static-v1.0.1';
+const DYNAMIC_CACHE_NAME = 'ar-speaker-dynamic-v1.0.1';
 
 // Files to cache for offline functionality
 const STATIC_FILES = [
@@ -13,7 +13,7 @@ const STATIC_FILES = [
   '/index.html',
   '/src/app.js',
   '/src/styles.css',
-  '/src/modules/ar-session.js',
+  '/src/modules/camera-session.js',
   '/src/modules/detection.js',
   '/src/modules/interaction.js',
   '/src/modules/triangle.js',

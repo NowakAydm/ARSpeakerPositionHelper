@@ -71,9 +71,6 @@
                 <button id="reset" class="secondary-button">
                     Reset Session
                 </button>
-                <button id="debug-camera" class="debug-button" onclick="if(window.debugCamera) window.debugCamera(); else alert('Start camera first');">
-                    🔍 Debug
-                </button>
             </div>
 
             <!-- Instructions Panel -->
@@ -128,18 +125,6 @@
                 </div>
             </div>
 
-            <!-- Performance Monitor -->
-            <div id="performance" class="performance-monitor hidden">
-                <div class="perf-item">
-                    <span class="perf-label">FPS:</span>
-                    <span class="perf-value" id="fps-counter">0</span>
-                </div>
-                <div class="perf-item">
-                    <span class="perf-label">Memory:</span>
-                    <span class="perf-value" id="memory-usage">0 MB</span>
-                </div>
-            </div>
-
             <!-- Help Toggle -->
             <button id="help-toggle" class="help-button" title="Toggle Instructions">?</button>
             
@@ -151,7 +136,10 @@
         <div id="debug-console" class="debug-console">
             <div class="debug-header">
                 <span>Debug Console</span>
-                <button class="debug-close" onclick="document.getElementById('debug-console').classList.add('hidden')">×</button>
+                <div>
+                    <button class="debug-clear" onclick="document.getElementById('debug-content').innerHTML = ''">Clear</button>
+                    <button class="debug-close" onclick="document.getElementById('debug-console').classList.add('hidden')">×</button>
+                </div>
             </div>
             <div class="debug-content" id="debug-content">
                 <div class="debug-message info">[Debug] Console initialized - you can see all app messages here</div>

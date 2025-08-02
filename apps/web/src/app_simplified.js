@@ -4,174 +4,50 @@
  */
 
 import { TriangleCalculator } from './modules/triangle.js';
-import { CameraSession } from './modules/camera-session.js';
 
 class ARSpeakerApp {
     constructor() {
         this.triangleCalculator = null;
-        this.cameraSession = null;
         this.speakers = [];
         this.userPosition = null;
         this.currentStep = 1;
         this.isSessionActive = false;
         
-        // Set up global debug logger
-        window.appDebugLog = this.debugLog.bind(this);
-        window.appDebugError = this.debugError.bind(this);
-        window.appDebugWarning = this.debugWarning.bind(this);
-        window.appDebugSuccess = this.debugSuccess.bind(this);
-        window.appDebugInfo = this.debugInfo.bind(this);
-        
         this.init();
-    }
-
-    /**
-     * Debug console logging methods
-     */
-    debugLog(message, type = 'info') {
-        // Always log to browser console
-        console.log(message);
-        
-        // Also log to debug console if available
-        const debugContent = document.getElementById('debug-content');
-        if (debugContent) {
-            const messageElement = document.createElement('div');
-            messageElement.className = `debug-message ${type}`;
-            messageElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            debugContent.appendChild(messageElement);
-            
-            // Scroll to bottom
-            debugContent.scrollTop = debugContent.scrollHeight;
-            
-            // Limit to last 100 messages
-            const messages = debugContent.children;
-            if (messages.length > 100) {
-                debugContent.removeChild(messages[0]);
-            }
-        }
-    }
-
-    debugError(message) {
-        this.debugLog(`❌ ${message}`, 'error');
-    }
-
-    debugWarning(message) {
-        this.debugLog(`⚠️ ${message}`, 'warning');
-    }
-
-    debugSuccess(message) {
-        this.debugLog(`✅ ${message}`, 'success');
-    }
-
-    debugInfo(message) {
-        this.debugLog(`ℹ️ ${message}`, 'info');
     }
 
     /**
      * Initialize the application (simplified)
      */
     async init() {
-        this.debugInfo('🚀 Initializing Speaker Position Helper');
+        console.log('🚀 Initializing Speaker Position Helper (Simplified Mode)');
         
         try {
-            // Initialize debug console
-            this.initializeDebugConsole();
-            this.debugSuccess('Debug console initialized');
-            
             // Initialize UI elements
             this.initializeUI();
-            this.debugSuccess('UI initialized');
+            console.log('✅ UI initialized');
             
             // Initialize triangle calculator
             this.triangleCalculator = new TriangleCalculator();
-            this.debugSuccess('Triangle calculator initialized');
-            
-            // Initialize camera session (for future use)
-            await this.initializeCameraSession();
+            console.log('✅ Triangle calculator initialized');
             
             // Setup event listeners
             this.setupEventListeners();
-            this.debugSuccess('Event listeners setup');
+            console.log('✅ Event listeners setup');
             
             // Hide loading and enable UI
             this.hideLoading();
             this.enableInitialButtons();
             
-            this.debugSuccess('Application initialized successfully');
+            console.log('✅ Application initialized successfully');
             
             // Expose debug functions
             this.exposeDebugFunctions();
             
         } catch (error) {
-            this.debugError(`Failed to initialize application: ${error.message}`);
+            console.error('❌ Failed to initialize application:', error);
             this.hideLoading();
             this.showError('Failed to initialize the application. Please refresh and try again.');
-        }
-    }
-
-    /**
-     * Initialize debug console
-     */
-    initializeDebugConsole() {
-        const debugToggle = document.getElementById('debug-toggle');
-        const debugConsole = document.getElementById('debug-console');
-        
-        if (debugToggle && debugConsole) {
-            // Start with debug console visible for development
-            debugConsole.classList.remove('hidden');
-            
-            // Toggle functionality
-            debugToggle.addEventListener('click', () => {
-                debugConsole.classList.toggle('hidden');
-                if (!debugConsole.classList.contains('hidden')) {
-                    this.debugInfo('Debug console opened');
-                }
-            });
-            
-            // Add welcome message
-            this.debugInfo('=== DEBUG CONSOLE INITIALIZED ===');
-            this.debugInfo('All app events and camera session logs will appear here');
-        }
-    }
-
-    /**
-     * Initialize camera session for future camera functionality
-     */
-    async initializeCameraSession() {
-        this.debugInfo('Initializing camera session...');
-        
-        try {
-            // Check if camera is supported
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                this.debugWarning('Camera access not supported in this browser');
-                return;
-            }
-            
-            // Create camera session instance but don't start it yet
-            this.cameraSession = new CameraSession();
-            this.debugSuccess('Camera session object created');
-            
-            // Test camera permissions
-            try {
-                await navigator.mediaDevices.getUserMedia({ video: true });
-                this.debugSuccess('Camera permission granted');
-                
-                // Stop the test stream immediately
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                stream.getTracks().forEach(track => track.stop());
-                
-            } catch (permissionError) {
-                if (permissionError.name === 'NotAllowedError') {
-                    this.debugWarning('Camera permission denied by user');
-                } else if (permissionError.name === 'NotFoundError') {
-                    this.debugWarning('No camera device found');
-                } else {
-                    this.debugWarning(`Camera permission test failed: ${permissionError.message}`);
-                }
-            }
-            
-        } catch (error) {
-            this.debugError(`Camera session initialization failed: ${error.message}`);
         }
     }
 
@@ -200,12 +76,12 @@ class ARSpeakerApp {
         const requiredElements = ['startButton', 'arContainer', 'arStatus'];
         for (const elementKey of requiredElements) {
             if (!this.elements[elementKey]) {
-                this.debugError(`Required UI element not found: ${elementKey}`);
+                console.error(`❌ Required UI element not found: ${elementKey}`);
                 throw new Error(`Required UI element not found: ${elementKey}`);
             }
         }
 
-        this.debugInfo('📋 UI elements validated successfully');
+        console.log('📋 UI elements validated successfully');
     }
 
     /**
@@ -215,7 +91,7 @@ class ARSpeakerApp {
         // Start/Stop button
         if (this.elements.startButton) {
             this.elements.startButton.addEventListener('click', () => {
-                this.debugInfo('🔘 Start button clicked');
+                console.log('🔘 Start button clicked');
                 
                 if (this.isSessionActive) {
                     this.stopManualSession();
@@ -277,14 +153,14 @@ class ARSpeakerApp {
         }
         
         this.updateStatus('Ready - Manual speaker positioning mode');
-        this.debugSuccess('✅ Initial buttons enabled');
+        console.log('✅ Initial buttons enabled');
     }
 
     /**
      * Start manual session
      */
     startManualSession() {
-        this.debugInfo('🚀 Starting manual session');
+        console.log('🚀 Starting manual session');
         
         try {
             this.isSessionActive = true;
@@ -305,10 +181,10 @@ class ARSpeakerApp {
             this.updateTriangleQuality('-');
             this.updateInstructionStep(2);
             
-            this.debugSuccess('✅ Manual session started');
+            console.log('✅ Manual session started');
             
         } catch (error) {
-            this.debugError(`Failed to start manual session: ${error.message}`);
+            console.error('❌ Failed to start manual session:', error);
             this.showError('Failed to start manual session');
         }
     }
@@ -317,7 +193,7 @@ class ARSpeakerApp {
      * Stop manual session
      */
     stopManualSession() {
-        this.debugInfo('🛑 Stopping manual session');
+        console.log('🛑 Stopping manual session');
         
         try {
             this.isSessionActive = false;
@@ -338,10 +214,10 @@ class ARSpeakerApp {
             this.updateTriangleQuality('-');
             this.updateInstructionStep(1);
             
-            this.debugSuccess('✅ Manual session stopped');
+            console.log('✅ Manual session stopped');
             
         } catch (error) {
-            this.debugError(`Failed to stop manual session: ${error.message}`);
+            console.error('❌ Failed to stop manual session:', error);
             this.showError('Failed to stop manual session');
         }
     }
@@ -350,14 +226,14 @@ class ARSpeakerApp {
      * Handle container clicks to set positions
      */
     handleContainerClick(event) {
-        this.debugInfo('👆 Container clicked');
+        console.log('👆 Container clicked');
         
         if (!this.userPosition) {
             // First click sets listener position
             this.userPosition = { x: 0, y: 0, z: 0 };
             this.updatePositionStatus('Set by click');
             this.updateStatus('Manual Mode - Listener position set. Click to add speakers.');
-            this.debugInfo('👤 User position set');
+            console.log('👤 User position set');
         } else {
             // Subsequent clicks add speakers
             const speakerId = `speaker_${this.speakers.length + 1}`;
@@ -383,7 +259,7 @@ class ARSpeakerApp {
                 this.updateInstructionStep(3);
             }
             
-            this.debugInfo(`🔊 Added speaker ${this.speakers.length}`);
+            console.log(`🔊 Added speaker ${this.speakers.length}`);
         }
     }
 
@@ -404,7 +280,7 @@ class ARSpeakerApp {
             this.calculateOptimalTriangle();
         }
         
-        this.debugInfo('🎯 Position calibrated');
+        console.log('🎯 Position calibrated');
     }
 
     /**
@@ -415,7 +291,7 @@ class ARSpeakerApp {
             return;
         }
 
-        this.debugInfo('📐 Calculating optimal triangle');
+        console.log('📐 Calculating optimal triangle');
         
         // Use triangle calculator
         this.triangleCalculator.setSpeakers(this.speakers);
@@ -424,14 +300,14 @@ class ARSpeakerApp {
         const quality = this.triangleCalculator.getTriangleQuality();
         this.updateTriangleQuality(`${quality}%`);
         
-        this.debugInfo(`📐 Triangle quality: ${quality}%`);
+        console.log(`📐 Triangle quality: ${quality}%`);
     }
 
     /**
      * Reset session
      */
     async resetSession() {
-        this.debugInfo('🔄 Resetting session');
+        console.log('🔄 Resetting session');
         
         if (this.isSessionActive) {
             this.stopManualSession();
@@ -448,7 +324,7 @@ class ARSpeakerApp {
         this.updatePositionStatus('Not Set');
         this.updateTriangleQuality('-');
         
-        this.debugSuccess('✅ Session reset complete');
+        console.log('✅ Session reset complete');
     }
 
     /**
@@ -456,7 +332,7 @@ class ARSpeakerApp {
      */
     updateInstructionStep(step) {
         this.currentStep = step;
-        this.debugInfo(`📋 Instruction step: ${step}`);
+        console.log(`📋 Instruction step: ${step}`);
     }
 
     /**
@@ -473,7 +349,7 @@ class ARSpeakerApp {
         if (this.elements.arStatus) {
             this.elements.arStatus.textContent = status;
         }
-        this.debugInfo(`📊 Status: ${status}`);
+        console.log(`📊 Status: ${status}`);
     }
 
     updateSpeakerCount(count) {
@@ -500,7 +376,7 @@ class ARSpeakerApp {
             this.elements.errorMessage.textContent = message;
             this.elements.errorModal.classList.remove('hidden');
         }
-        this.debugError(`🚨 Error: ${message}`);
+        console.error('🚨 Error:', message);
     }
 
     hideError() {
@@ -520,24 +396,21 @@ class ARSpeakerApp {
      */
     exposeDebugFunctions() {
         window.debugApp = () => {
-            this.debugInfo('🔍 App Debug Info:');
-            this.debugInfo(`  - Session active: ${this.isSessionActive}`);
-            this.debugInfo(`  - Triangle calculator: ${this.triangleCalculator}`);
-            this.debugInfo(`  - Speakers: ${this.speakers.length}`);
-            this.debugInfo(`  - User position: ${this.userPosition ? 'Set' : 'Not set'}`);
-            this.debugInfo(`  - Current step: ${this.currentStep}`);
-            this.debugInfo(`  - Camera session: ${this.cameraSession ? 'Available' : 'Not available'}`);
+            console.log('🔍 App Debug Info:');
+            console.log('  - Session active:', this.isSessionActive);
+            console.log('  - Triangle calculator:', this.triangleCalculator);
+            console.log('  - Speakers:', this.speakers);
+            console.log('  - User position:', this.userPosition);
+            console.log('  - Current step:', this.currentStep);
         };
         
         window.addTestSpeaker = () => {
             if (this.isSessionActive) {
                 this.handleContainerClick(null);
             } else {
-                this.debugWarning('Start manual mode first');
+                console.log('Start manual mode first');
             }
         };
-        
-        this.debugSuccess('Debug functions exposed to window object');
     }
 }
 
