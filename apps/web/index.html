@@ -43,19 +43,19 @@
     <div id="app">
         <!-- Header -->
         <header class="app-header">
-            <h1>AR Speaker Position Helper</h1>
-            <p class="subtitle">Find your optimal listening position</p>
+            <h1>Camera Speaker Position Helper</h1>
+            <p class="subtitle">Find your optimal listening position using your camera</p>
         </header>
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <!-- AR View Container -->
+            <!-- Camera View Container -->
             <div id="ar-container" class="ar-container">
                 <div class="ar-placeholder">
                     <div class="placeholder-content">
                         <div class="placeholder-icon">📱</div>
-                        <h2>AR View</h2>
-                        <p>Click "Start AR Session" to begin detecting speakers</p>
+                        <h2>Camera View</h2>
+                        <p>Click "Start Camera Session" to begin detecting speakers</p>
                     </div>
                 </div>
             </div>
@@ -63,7 +63,7 @@
             <!-- Controls Panel -->
             <div class="controls-panel">
                 <button id="start-ar" class="primary-button" disabled>
-                    Start AR Session
+                    Start Camera Session
                 </button>
                 <button id="calibrate" class="secondary-button" disabled>
                     Calibrate Position
@@ -78,8 +78,8 @@
                 <div class="instruction-step active" data-step="1">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>Start AR Session</h3>
-                        <p>Click "Start AR Session" to begin and allow camera access</p>
+                        <h3>Start Camera Session</h3>
+                        <p>Click "Start Camera Session" to begin and allow camera access</p>
                     </div>
                 </div>
                 <div class="instruction-step" data-step="2">
@@ -100,7 +100,7 @@
                     <div class="step-number">4</div>
                     <div class="step-content">
                         <h3>Optimize Position</h3>
-                        <p>Follow the AR guidance to find the optimal listening triangle</p>
+                        <p>Follow the camera guidance to find the optimal listening triangle</p>
                     </div>
                 </div>
             </div>
@@ -108,7 +108,7 @@
             <!-- Status Display -->
             <div id="status" class="status-display">
                 <div class="status-item">
-                    <span class="status-label">AR Status:</span>
+                    <span class="status-label">Camera Status:</span>
                     <span class="status-value" id="ar-status">Initializing...</span>
                 </div>
                 <div class="status-item">
@@ -150,7 +150,7 @@
     <!-- Loading Overlay -->
     <div id="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
-        <p>Loading AR capabilities...</p>
+        <p>Loading camera capabilities...</p>
     </div>
 
     <!-- Error Modal -->
