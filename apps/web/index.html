@@ -173,9 +173,23 @@
         </div>
     </div>
 
-    <!-- External Dependencies - Local fallbacks for better compatibility -->
-    <script src="vendor/three-mock.js"></script>
-    <script src="vendor/tf-mock.js"></script>
+    <!-- External Dependencies - Real libraries from CDN with local fallbacks -->
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script>
+        // Fallback to local mock if CDN fails
+        if (!window.THREE) {
+            document.write('<script src="vendor/three-mock.js"><\/script>');
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
+    <script>
+        // Fallback to local mock if CDN fails
+        if (!window.tf || !window.cocoSsd) {
+            document.write('<script src="vendor/tf-mock.js"><\/script>');
+        }
+    </script>
     
     <!-- Scripts -->
     <script type="module" src="src/app.js"></script>
