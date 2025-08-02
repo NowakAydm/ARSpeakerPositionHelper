@@ -1,6 +1,7 @@
 /**
  * User Interaction Module
- * Handles touch input and AR space interaction with robust error handling
+ * Handles touch input and camera space interaction with robust error handling
+ * Updated to work with camera session instead of WebXR AR
  */
 
 // Use global THREE object loaded from CDN
@@ -12,35 +13,50 @@ export class UserInteraction {
         this.tapPosition = null;
         this.listeners = new Map();
         this.container = null;
-        this.arSession = null;
+        this.cameraSession = null;
         this.markers = [];
         this.currentFrame = null;
     }
 
     /**
-     * Initialize touch interaction for AR
+     * Initialize touch interaction for camera space
      */
-    initialize(container, arSession) {
+    initialize(container, cameraSession) {
         this.container = container;
-        this.arSession = arSession;
+        this.cameraSession = cameraSession;
         this.setupTouchListeners();
         this.setupMarkerSystem();
         this.isEnabled = true;
-        console.log('👆 Touch interaction initialized');
+        console.log('👆 Touch interaction initialized for camera session');
     }
 
     /**
-     * Setup visual marker system for AR feedback
+     * Setup visual marker system for camera feedback
      */
     setupMarkerSystem() {
         this.markers = [];
         
-        // Set frame callback to get XR frame data
-        if (this.arSession) {
-            this.arSession.setFrameCallback((timestamp, frame) => {
-                this.currentFrame = frame;
+        // Set frame callback for camera session
+        if (this.cameraSession) {
+            this.cameraSession.setFrameCallback(() => {
+                // Basic frame callback for marker updates
+                this.updateMarkers();
             });
         }
+    }
+
+    /**
+     * Update markers each frame
+     */
+    updateMarkers() {
+        // Simple marker updating - can be expanded for animations, etc.
+        this.markers.forEach(marker => {
+            if (marker.mesh && marker.mesh.material) {
+                // Simple pulsing effect
+                const time = Date.now() * 0.002;
+                marker.mesh.material.opacity = 0.7 + Math.sin(time) * 0.2;
+            }
+        });
     }
 
     /**
@@ -169,27 +185,27 @@ export class UserInteraction {
     }
 
     /**
-     * Convert screen coordinates to AR world coordinates using hit testing
+     * Convert screen coordinates to camera world coordinates
      */
     async screenToWorldCoordinates(screenX, screenY) {
-        if (!this.arSession || !this.currentFrame) {
-            console.warn('⚠️ AR session or frame not available for hit testing');
+        if (!this.cameraSession) {
+            console.warn('⚠️ Camera session not available');
             return this.fallbackScreenToWorld(screenX, screenY);
         }
 
         try {
-            // Use AR session's screen to world conversion with hit testing
-            const worldPosition = await this.arSession.screenToWorld(screenX, screenY, this.currentFrame);
+            // Use camera session's screen to world conversion
+            const worldPosition = this.cameraSession.screenToWorld(screenX, screenY, 2.0); // 2 meters distance
             
-            if (worldPosition && (worldPosition.x !== 0 || worldPosition.y !== 0 || worldPosition.z !== 0)) {
+            if (worldPosition) {
                 return worldPosition;
             }
             
-            // Fallback if hit testing fails
+            // Fallback if conversion fails
             return this.fallbackScreenToWorld(screenX, screenY);
             
         } catch (error) {
-            console.warn('⚠️ AR hit testing failed, using fallback:', error);
+            console.warn('⚠️ Camera coordinate conversion failed, using fallback:', error);
             return this.fallbackScreenToWorld(screenX, screenY);
         }
     }
@@ -213,23 +229,23 @@ export class UserInteraction {
     }
 
     /**
-     * Place visual marker in AR space
+     * Place visual marker in camera space
      */
     placeMarker(position) {
-        if (!this.arSession || !this.arSession.scene) {
-            console.warn('⚠️ AR scene not available for marker placement');
+        if (!this.cameraSession || !this.cameraSession.scene) {
+            console.warn('⚠️ Camera scene not available for marker placement');
             return null;
         }
 
         // Create marker geometry
-        const geometry = new THREE.SphereGeometry(0.05, 16, 16);
-        const material = new THREE.MeshBasicMaterial({ 
+        const geometry = new window.THREE.SphereGeometry(0.05, 16, 16);
+        const material = new window.THREE.MeshBasicMaterial({ 
             color: 0x00ff00,
             transparent: true,
             opacity: 0.8
         });
         
-        const marker = new THREE.Mesh(geometry, material);
+        const marker = new window.THREE.Mesh(geometry, material);
         marker.position.set(position.x, position.y, position.z);
         
         // Add pulsing animation
@@ -246,7 +262,7 @@ export class UserInteraction {
         animate();
         
         // Add to scene
-        this.arSession.addToScene(marker);
+        this.cameraSession.addToScene(marker);
         
         // Store marker reference
         const markerData = {
@@ -262,7 +278,7 @@ export class UserInteraction {
         // Limit number of markers (keep only last 3)
         while (this.markers.length > 3) {
             const oldMarker = this.markers.shift();
-            this.arSession.removeFromScene(oldMarker.mesh);
+            this.cameraSession.removeFromScene(oldMarker.mesh);
         }
         
         console.log('📍 Marker placed at:', position);

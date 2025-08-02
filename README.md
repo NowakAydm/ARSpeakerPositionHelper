@@ -1,19 +1,19 @@
-# AR Speaker Position Helper
+# Camera Speaker Position Helper
 
-A production-ready mobile web app that leverages AR to detect speaker outlines automatically, allows user interaction via tapping, and helps create an equilateral triangle for optimal listening positioning.
+A production-ready mobile web app that leverages camera-based tracking to detect speaker outlines automatically, allows user interaction via tapping, and helps create an equilateral triangle for optimal listening positioning.
 
 ## Features
 
-- **AR Object Detection**: Automatically detect speaker outlines using TensorFlow.js
-- **Interactive Positioning**: Allow users to tap and set their listening position in AR space
+- **Camera Object Detection**: Automatically detect speaker outlines using TensorFlow.js
+- **Interactive Positioning**: Allow users to tap and set their listening position in camera space
 - **Optimal Triangle Guidance**: Calculate and visualize an equilateral triangle for ideal listening position
-- **Mobile-First Design**: Responsive web app optimized for mobile AR experiences
-- **WebXR Integration**: Modern AR capabilities using WebXR and three.js
+- **Mobile-First Design**: Responsive web app optimized for mobile camera experiences
+- **Camera Integration**: Modern camera capabilities using getUserMedia and three.js
 
 ## Architecture
 
 ### Technology Stack
-- **AR Framework**: WebXR + three.js for AR scene rendering
+- **Camera Framework**: getUserMedia + three.js for camera overlay rendering
 - **Object Detection**: TensorFlow.js with pre-trained COCO SSD model
 - **Build System**: Modern ES modules with development scripts
 - **UI/UX**: Mobile-first responsive design with touch interactions
@@ -21,13 +21,13 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 ### Project Structure
 ```
 ├── apps/
-│   └── web/                 # Main AR web application
+│   └── web/                 # Main camera web application
 │       ├── src/
 │       │   ├── app.js       # Main application entry point
 │       │   ├── styles.css   # Mobile-responsive styles
 │       │   └── modules/
-│       │       ├── ar-session.js   # WebXR AR session management
-│       │       ├── detection.js    # TensorFlow.js object detection
+│       │       ├── camera-session.js   # Camera session management
+│       │       ├── detection.js        # TensorFlow.js object detection
 │       │       ├── interaction.js  # User input and touch handling
 │       │       └── triangle.js     # Equilateral triangle calculations
 │       ├── index.html       # Main HTML entry point
@@ -47,24 +47,24 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
 - [x] Basic HTML, JS, and CSS setup
 - [x] package.json with dependencies
 
-### Phase 2: AR Foundation
-- [x] WebXR AR session boilerplate
-- [x] Basic AR camera feed with three.js scene rendering
-- [x] AR coordinate system setup
+### Phase 2: Camera Foundation
+- [x] Camera session boilerplate using getUserMedia
+- [x] Basic camera feed with three.js scene overlay
+- [x] Camera coordinate system setup
 
 ### Phase 3: Object Detection
 - [x] TensorFlow.js integration
 - [x] Speaker detection using pre-trained models
-- [x] AR space mapping for detected objects
+- [x] Camera space mapping for detected objects
 
 ### Phase 4: User Interaction
-- [x] Touch interaction in AR space
+- [x] Touch interaction in camera space
 - [x] Visual feedback for marker placement
 - [x] Listening position setting
 
 ### Phase 5: Triangle Guidance
 - [x] Equilateral triangle calculation
-- [x] Visual triangle overlay in AR
+- [x] Visual triangle overlay in camera view
 - [x] Real-time position adjustment feedback
 
 ### Phase 6: UX Enhancement
@@ -89,7 +89,7 @@ A production-ready mobile web app that leverages AR to detect speaker outlines a
    npm run dev
    ```
 
-3. **Start with HTTPS (required for AR)**:
+3. **Start with HTTPS (required for camera access)**:
    ```bash
    cd apps/web && npm run start:https
    ```
@@ -214,28 +214,28 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions includin
 
 ## Requirements
 
-- **HTTPS**: Required for WebXR and camera access
-- **Modern Browser**: Chrome/Edge/Firefox with WebXR support
-- **Mobile Device**: Optimized for mobile AR experiences
-- **Camera Permission**: Required for AR functionality
+- **HTTPS**: Required for camera access
+- **Modern Browser**: Chrome/Edge/Firefox/Safari with camera support
+- **Mobile Device**: Optimized for mobile camera experiences
+- **Camera Permission**: Required for camera functionality
 
 ## Browser Support
 
 | Browser | Android | iOS | Desktop |
 |---------|---------|-----|---------|
-| Chrome 90+ | ✅ | ❌ | ⚠️ (Limited AR) |
-| Safari 14+ | ❌ | ✅ | ❌ |
-| Firefox 85+ | ⚠️ (Experimental) | ❌ | ❌ |
-| Edge 90+ | ✅ | ❌ | ⚠️ (Limited AR) |
+| Chrome 90+ | ✅ | ✅ | ✅ |
+| Safari 14+ | ✅ | ✅ | ✅ |
+| Firefox 85+ | ✅ | ✅ | ✅ |
+| Edge 90+ | ✅ | ✅ | ✅ |
 
 ## Features
 
 ### Core Functionality
-- ✅ **WebXR AR Sessions**: Full immersive AR with hit testing
+- ✅ **Camera Sessions**: Full camera access with overlay rendering
 - ✅ **Object Detection**: TensorFlow.js-powered speaker detection
 - ✅ **Interactive Positioning**: Touch-to-place position setting
 - ✅ **Triangle Calculation**: Real-time optimal positioning guidance
-- ✅ **Visual Feedback**: AR overlays with quality indicators
+- ✅ **Visual Feedback**: Camera overlays with quality indicators
 
 ### Progressive Web App
 - ✅ **Offline Support**: Service worker with intelligent caching

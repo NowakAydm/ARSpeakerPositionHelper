@@ -1,17 +1,18 @@
 /**
  * AR Speaker Position Helper
  * Main application entry point
+ * Updated to use camera-based AR for broader device compatibility
  */
 
-import { ARSession } from './modules/ar-session.js';
+import { CameraSession } from './modules/camera-session.js';
 import { ObjectDetection } from './modules/detection.js';
 import { UserInteraction } from './modules/interaction.js';
 import { TriangleCalculator } from './modules/triangle.js';
 
 class ARSpeakerApp {
     constructor() {
-        this.isARSupported = false;
-        this.arSession = null;
+        this.isCameraSupported = false;
+        this.cameraSession = null;
         this.objectDetection = null;
         this.userInteraction = null;
         this.triangleCalculator = null;
@@ -26,7 +27,7 @@ class ARSpeakerApp {
      * Ensures proper user feedback even when components fail to load
      */
     async init() {
-        console.log('🚀 Initializing AR Speaker Position Helper');
+        console.log('🚀 Initializing Camera AR Speaker Position Helper');
         
         try {
             // Initialize UI elements first - this should always work
@@ -46,8 +47,8 @@ class ARSpeakerApp {
             // Initialize triangle calculator
             this.triangleCalculator = new TriangleCalculator();
             
-            // Check AR support with comprehensive error handling
-            await this.checkARSupport();
+            // Check camera support with comprehensive error handling
+            await this.checkCameraSupport();
             
             // Setup event listeners
             this.setupEventListeners();
@@ -69,16 +70,16 @@ class ARSpeakerApp {
      * Convert technical errors to user-friendly messages
      */
     getUserFriendlyErrorMessage(error) {
-        if (error.message.includes('WebXR')) {
-            return 'Your browser doesn\'t support AR features. Please try using Chrome, Edge, or Samsung Internet on a mobile device.';
+        if (error.message.includes('Camera') || error.message.includes('camera')) {
+            return 'Camera access is required for this app. Please allow camera permissions and try again.';
         } else if (error.message.includes('TensorFlow') || error.message.includes('detection')) {
-            return 'Unable to load object detection capabilities. The app may still work for basic AR functionality with manual speaker placement.';
+            return 'Unable to load object detection capabilities. The app may still work for basic functionality with manual speaker placement.';
         } else if (error.message.includes('connection') || error.message.includes('network')) {
             return 'Network connection issue. Please check your internet connection and try again.';
         } else if (error.message.includes('HTTPS') || error.message.includes('secure')) {
-            return 'AR requires a secure connection (HTTPS). Please access this app over HTTPS.';
+            return 'Camera access requires a secure connection (HTTPS). Please access this app over HTTPS.';
         } else {
-            return 'Failed to initialize AR capabilities. Please ensure you\'re using a compatible browser with camera access and try again.';
+            return 'Failed to initialize camera capabilities. Please ensure you\'re using a compatible browser with camera access and try again.';
         }
     }
 
@@ -125,69 +126,77 @@ class ARSpeakerApp {
      * Robust AR support detection with comprehensive error handling
      * Provides clear user feedback for unsupported browsers and devices
      */
-    async checkARSupport() {
-        this.updateStatus('Checking AR support...');
+    async checkCameraSupport() {
+        this.updateStatus('Checking camera support...');
         
         try {
-            // First check if WebXR is available in the browser
-            if (!navigator.xr) {
-                this.isARSupported = false;
-                this.updateStatus('WebXR not supported');
-                this.showARUnsupportedMessage('WebXR API not available in this browser');
+            // Check if getUserMedia is available
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                this.isCameraSupported = false;
+                this.updateStatus('Camera not supported');
+                this.showCameraUnsupportedMessage('Camera API not available in this browser');
                 return;
             }
 
-            // Check if immersive AR sessions are supported
+            // Test camera access without actually starting it
             let isSupported = false;
             try {
-                isSupported = await navigator.xr.isSessionSupported('immersive-ar');
-            } catch (sessionError) {
-                console.warn('AR session support check failed:', sessionError);
-                this.isARSupported = false;
-                this.updateStatus('AR support check failed');
-                this.showARUnsupportedMessage('Unable to determine AR capabilities on this device');
-                return;
+                // Quick test to see if camera enumeration works
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                isSupported = videoDevices.length > 0;
+            } catch (deviceError) {
+                console.warn('Camera device check failed:', deviceError);
+                // Assume camera is available but permissions might be needed
+                isSupported = true;
             }
             
-            this.isARSupported = isSupported;
+            this.isCameraSupported = isSupported;
             
             if (isSupported) {
-                this.updateStatus('AR Ready');
+                this.updateStatus('Camera Ready');
                 this.elements.startButton.disabled = false;
-                this.elements.startButton.textContent = 'Start AR Session';
-                console.log('✅ AR support confirmed');
+                this.elements.startButton.textContent = 'Start Camera Session';
+                console.log('✅ Camera support confirmed');
             } else {
-                this.updateStatus('AR not available');
-                this.showARUnsupportedMessage('AR sessions not supported on this device');
+                this.updateStatus('Camera not available');
+                this.showCameraUnsupportedMessage('No camera found on this device');
             }
             
         } catch (error) {
-            console.error('❌ AR support check failed:', error);
-            this.isARSupported = false;
-            this.updateStatus('AR support unknown');
-            this.showARUnsupportedMessage('Failed to check AR capabilities');
+            console.error('❌ Camera support check failed:', error);
+            this.isCameraSupported = false;
+            this.updateStatus('Camera support unknown');
+            this.showCameraUnsupportedMessage('Failed to check camera capabilities');
         }
     }
     
     /**
-     * Show user-friendly message when AR is not supported
+     * Show user-friendly message when camera is not supported
      */
-    showARUnsupportedMessage(reason) {
+    showCameraUnsupportedMessage(reason) {
         const browserInfo = this.detectBrowser();
-        let message = `AR functionality is not available.\n\nReason: ${reason}`;
+        let message = `Camera functionality is not available.\n\nReason: ${reason}`;
         
         // Add browser-specific guidance
         if (browserInfo.isFirefox) {
-            message += '\n\nFor Firefox users:\n• AR support is experimental\n• Try Chrome or Edge for better AR support\n• On Android, use Chrome or Samsung Internet';
+            message += '\n\nFor Firefox users:\n• Camera access should work on modern versions\n• Check camera permissions in browser settings';
         } else if (browserInfo.isSafari) {
-            message += '\n\nFor Safari users:\n• WebXR is not yet supported\n• Try Chrome or Edge on Android\n• iOS AR apps require native development';
-        } else if (browserInfo.isChrome && !browserInfo.isMobile) {
-            message += '\n\nFor desktop Chrome:\n• AR requires a mobile device with camera\n• Try accessing this app on your phone\n• Ensure HTTPS connection';
+            message += '\n\nFor Safari users:\n• Camera access is supported\n• Check privacy settings and allow camera access';
+        } else if (browserInfo.isChrome) {
+            message += '\n\nFor Chrome users:\n• Ensure camera permissions are granted\n• Check that no other app is using the camera';
         } else {
-            message += '\n\nFor best AR support:\n• Use Chrome, Edge, or Samsung Internet on Android\n• Ensure camera permissions are granted\n• Use HTTPS connection';
+            message += '\n\nGeneral troubleshooting:\n• Ensure camera permissions are granted\n• Try refreshing the page\n• Use HTTPS connection';
         }
         
-        this.elements.startButton.textContent = 'AR Not Available';
+        let suggestions = 'Try using a different device or browser that supports camera access.';
+        if (browserInfo.isMobile) {
+            suggestions = 'Check your camera permissions and try again.';
+        }
+        
+        message += `\n\n${suggestions}`;
+        
+        this.elements.startButton.textContent = 'Camera Not Available';
         this.elements.startButton.disabled = true;
         this.showError(message);
     }
@@ -207,12 +216,12 @@ class ARSpeakerApp {
     }
 
     setupEventListeners() {
-        // Start AR button
+        // Start Camera button
         this.elements.startButton.addEventListener('click', () => {
-            if (this.arSession) {
-                this.stopARSession();
+            if (this.cameraSession) {
+                this.stopCameraSession();
             } else {
-                this.startARSession();
+                this.startCameraSession();
             }
         });
 
@@ -265,30 +274,30 @@ class ARSpeakerApp {
     }
 
     /**
-     * Start AR session with comprehensive error handling and user feedback
+     * Start camera session with comprehensive error handling and user feedback
      */
-    async startARSession() {
-        if (!this.isARSupported) {
-            this.showARUnsupportedMessage('AR functionality is not available on this device or browser');
+    async startCameraSession() {
+        if (!this.isCameraSupported) {
+            this.showCameraUnsupportedMessage('Camera functionality is not available on this device or browser');
             return;
         }
 
         try {
-            this.updateStatus('Starting AR session...');
+            this.updateStatus('Starting camera session...');
             this.updateInstructionStep(2);
             this.elements.startButton.disabled = true;
             
-            // Initialize AR session if not already done
-            if (!this.arSession) {
-                this.arSession = new ARSession();
-                await this.arSession.initialize(this.elements.arContainer);
+            // Initialize camera session if not already done
+            if (!this.cameraSession) {
+                this.cameraSession = new CameraSession();
+                await this.cameraSession.initialize(this.elements.arContainer);
             }
             
-            // Start the AR session
-            await this.arSession.start();
+            // Start the camera session
+            await this.cameraSession.start();
             
-            // Initialize triangle calculator with AR session
-            this.triangleCalculator.initialize(this.arSession);
+            // Initialize triangle calculator with camera session
+            this.triangleCalculator.initialize(this.cameraSession);
             
             // Setup triangle guidance callbacks
             this.setupTriangleGuidance();
@@ -309,30 +318,30 @@ class ARSpeakerApp {
             }
             
             // Update UI for active session
-            this.elements.startButton.textContent = 'Stop AR Session';
+            this.elements.startButton.textContent = 'Stop Camera Session';
             this.elements.startButton.disabled = false;
             this.elements.calibrateButton.disabled = false;
             this.elements.resetButton.disabled = false;
             
-            this.updateStatus('AR Active - Looking for speakers...');
+            this.updateStatus('Camera Active - Looking for speakers...');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Tap screen to set');
             this.updateTriangleQuality('-');
             
-            console.log('✅ AR session started');
+            console.log('✅ Camera session started');
             
         } catch (error) {
-            console.error('❌ Failed to start AR session:', error);
-            this.handleARError(error);
+            console.error('❌ Failed to start camera session:', error);
+            this.handleCameraError(error);
             this.elements.startButton.disabled = false;
             this.updateInstructionStep(1);
-            this.arSession = null;
+            this.cameraSession = null;
         }
     }
 
-    async stopARSession() {
+    async stopCameraSession() {
         try {
-            this.updateStatus('Stopping AR session...');
+            this.updateStatus('Stopping camera session...');
             
             // Stop performance monitoring
             this.stopPerformanceMonitoring();
@@ -353,10 +362,10 @@ class ARSpeakerApp {
                 this.userInteraction = null;
             }
             
-            // Cleanup AR session
-            if (this.arSession) {
-                await this.arSession.stop();
-                this.arSession = null;
+            // Cleanup camera session
+            if (this.cameraSession) {
+                this.cameraSession.stop();
+                this.cameraSession = null;
             }
             
             // Clear detected speakers
@@ -364,44 +373,41 @@ class ARSpeakerApp {
             this.userPosition = null;
             
             // Reset UI
-            this.elements.startButton.textContent = 'Start AR Session';
+            this.elements.startButton.textContent = 'Start Camera Session';
             this.elements.calibrateButton.disabled = true;
             this.elements.resetButton.disabled = true;
             
-            this.updateStatus('AR Ready');
+            this.updateStatus('Camera Ready');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Not Set');
             this.updateTriangleQuality('-');
             this.updateInstructionStep(1);
             
-            console.log('🛑 AR session stopped');
+            console.log('🛑 Camera session stopped');
             
         } catch (error) {
-            console.error('❌ Failed to stop AR session:', error);
-            this.showError('Failed to stop AR session properly. Please refresh the page if issues persist.');
+            console.error('❌ Failed to stop camera session:', error);
+            this.showError('Failed to stop camera session properly. Please refresh the page if issues persist.');
         }
     }
 
     calibratePosition() {
-        if (!this.arSession || !this.arSession.isActive) {
-            this.showError('Please start AR session first.');
+        if (!this.cameraSession || !this.cameraSession.isActive) {
+            this.showError('Please start camera session first.');
             return;
         }
 
         console.log('🎯 Calibrating user position...');
         
-        // Get current reticle position for user calibration
-        const reticlePosition = this.arSession.getReticlePosition();
+        // Use camera position as the user position
+        this.userPosition = {
+            x: 0,
+            y: 0, 
+            z: 0
+        };
         
-        if (reticlePosition) {
-            this.userPosition = reticlePosition;
-            this.updatePositionStatus('Calibrated');
-            console.log('📍 User position set:', this.userPosition);
-        } else {
-            this.userPosition = this.arSession.getCameraPose().position;
-            this.updatePositionStatus('Camera Position');
-            console.log('📱 Using camera position as fallback:', this.userPosition);
-        }
+        this.updatePositionStatus('Set at camera');
+        console.log('📱 User position set at camera position');
         
         // Enable triangle calculation if we have speakers
         if (this.speakers.length >= 2) {
@@ -418,7 +424,7 @@ class ARSpeakerApp {
         }
         
         // Initialize with AR container and session
-        this.userInteraction.initialize(this.elements.arContainer, this.arSession);
+        this.userInteraction.initialize(this.elements.arContainer, this.cameraSession);
         
         // Listen for tap events to set user position
         this.userInteraction.on('tap', (tapData) => {
@@ -523,8 +529,8 @@ class ARSpeakerApp {
      * Setup object detection integration with AR session
      */
     setupObjectDetection() {
-        if (!this.objectDetection || !this.arSession) {
-            console.warn('⚠️ Object detection or AR session not available');
+        if (!this.objectDetection || !this.cameraSession) {
+            console.warn('⚠️ Object detection or camera session not available');
             return;
         }
 
@@ -586,7 +592,7 @@ class ARSpeakerApp {
         let detectionCount = 0;
         
         const simulate = () => {
-            if (!this.arSession || !this.arSession.isActive) return;
+            if (!this.cameraSession || !this.cameraSession.isActive) return;
             
             // Simulate finding speakers after a few seconds
             detectionCount++;
@@ -637,7 +643,7 @@ class ARSpeakerApp {
             }
             
             // Continue simulation
-            if (this.arSession && this.arSession.isActive) {
+            if (this.cameraSession && this.cameraSession.isActive) {
                 requestAnimationFrame(simulate);
             }
         };
@@ -747,8 +753,8 @@ class ARSpeakerApp {
     async resetSession() {
         try {
             // Stop current session if active
-            if (this.arSession) {
-                await this.stopARSession();
+            if (this.cameraSession) {
+                await this.stopCameraSession();
             }
             
             // Clear all data
@@ -757,7 +763,7 @@ class ARSpeakerApp {
             
             // Reset UI completely
             this.updateInstructionStep(1);
-            this.updateStatus('AR Ready');
+            this.updateStatus('Camera Ready');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Not Set');
             this.updateTriangleQuality('-');
@@ -778,22 +784,22 @@ class ARSpeakerApp {
     /**
      * Enhanced error handling with user-friendly messages
      */
-    handleARError(error) {
-        let userMessage = 'An error occurred while starting AR.';
+    handleCameraError(error) {
+        let userMessage = 'An error occurred while starting camera.';
         let suggestions = '';
         
         if (error.message.includes('not supported')) {
-            userMessage = 'AR is not supported on this device or browser.';
-            suggestions = 'Try using Chrome, Firefox, or Edge on a mobile device with camera access.';
-        } else if (error.message.includes('camera') || error.message.includes('permission')) {
-            userMessage = 'Camera access is required for AR functionality.';
+            userMessage = 'Camera is not supported on this device or browser.';
+            suggestions = 'Try using a modern browser like Chrome, Firefox, or Edge on a device with camera access.';
+        } else if (error.message.includes('denied') || error.message.includes('permission')) {
+            userMessage = 'Camera access was denied.';
             suggestions = 'Please allow camera access and try again. Check your browser settings if needed.';
         } else if (error.message.includes('https') || error.message.includes('secure')) {
-            userMessage = 'AR requires a secure connection (HTTPS).';
+            userMessage = 'Camera access requires a secure connection (HTTPS).';
             suggestions = 'Please access this app over HTTPS or use a development server with SSL.';
-        } else if (error.message.includes('immersive-ar')) {
-            userMessage = 'This device does not support immersive AR features.';
-            suggestions = 'Try using a different device or browser that supports WebXR AR.';
+        } else if (error.message.includes('NotFoundError') || error.message.includes('camera found')) {
+            userMessage = 'No camera was found on this device.';
+            suggestions = 'Please ensure your device has a working camera and try again.';
         }
         
         const fullMessage = suggestions ? `${userMessage}\n\n${suggestions}` : userMessage;
@@ -812,7 +818,7 @@ class ARSpeakerApp {
             this.stopPerformanceMonitoring();
         } else {
             console.log('▶️ Page visible - resuming operations');
-            if (this.arSession && this.arSession.isActive && this.objectDetection) {
+            if (this.cameraSession && this.cameraSession.isActive && this.objectDetection) {
                 this.objectDetection.startDetection();
             }
             if (this.performanceMonitorEnabled) {

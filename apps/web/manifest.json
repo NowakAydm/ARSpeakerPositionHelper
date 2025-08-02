@@ -1,7 +1,7 @@
 {
-  "name": "AR Speaker Position Helper",
-  "short_name": "AR Speaker",
-  "description": "A mobile web app that uses AR to help position speakers and listeners for optimal audio experience",
+  "name": "Camera Speaker Position Helper",
+  "short_name": "Camera Speaker",
+  "description": "A mobile web app that uses camera-based tracking to help position speakers and listeners for optimal audio experience",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -62,9 +62,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Start AR Session",
-      "short_name": "Start AR",
-      "description": "Quickly start an AR session",
+      "name": "Start Camera Session",
+      "short_name": "Start Camera",
+      "description": "Quickly start a camera session",
       "url": "/?action=start",
       "icons": [
         {
@@ -80,26 +80,25 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "AR Speaker Position Helper in action"
+      "label": "Camera Speaker Position Helper in action"
     },
     {
       "src": "screenshots/screenshot-mobile.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Mobile AR interface"
+      "label": "Mobile camera interface"
     }
   ],
   "features": [
-    "WebXR",
-    "AR",
     "Camera",
     "Object Detection",
+    "Device Orientation",
     "Offline Support"
   ],
   "protocol_handlers": [
     {
-      "protocol": "web+arspeaker",
+      "protocol": "web+cameraspeaker",
       "url": "/?handler=%s"
     }
   ]

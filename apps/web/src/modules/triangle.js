@@ -12,16 +12,16 @@ export class TriangleCalculator {
         this.listenerPosition = null;
         this.optimalTriangle = null;
         this.triangleVisualization = null;
-        this.arSession = null;
+        this.cameraSession = null;
         this.guidanceCallbacks = [];
     }
 
     /**
-     * Initialize with AR session for visualization
+     * Initialize with camera session for visualization
      */
-    initialize(arSession) {
-        this.arSession = arSession;
-        console.log('📐 Triangle calculator initialized with AR session');
+    initialize(cameraSession) {
+        this.cameraSession = cameraSession;
+        console.log('📐 Triangle calculator initialized with camera session');
     }
 
     /**
@@ -143,15 +143,15 @@ export class TriangleCalculator {
      * Create visual triangle overlay in AR
      */
     createTriangleVisualization() {
-        if (!this.arSession || !this.optimalTriangle) {
-            console.warn('⚠️ AR session or triangle data not available for visualization');
+        if (!this.cameraSession || !this.optimalTriangle) {
+            console.warn('⚠️ Camera session or triangle data not available for visualization');
             return;
         }
 
         // Remove existing visualization
         this.removeTriangleVisualization();
 
-        const group = new THREE.Group();
+        const group = new window.THREE.Group();
         
         // Create triangle lines
         this.createTriangleLines(group);
@@ -165,8 +165,8 @@ export class TriangleCalculator {
         // Create current position indicator
         this.createCurrentPositionIndicator(group);
         
-        // Add to AR scene
-        this.arSession.addToScene(group);
+        // Add to camera scene
+        this.cameraSession.addToScene(group);
         this.triangleVisualization = group;
         
         console.log('📐 Triangle visualization created');
@@ -354,8 +354,8 @@ export class TriangleCalculator {
      * Remove existing triangle visualization
      */
     removeTriangleVisualization() {
-        if (this.triangleVisualization && this.arSession) {
-            this.arSession.removeFromScene(this.triangleVisualization);
+        if (this.triangleVisualization && this.cameraSession) {
+            this.cameraSession.removeFromScene(this.triangleVisualization);
             this.triangleVisualization = null;
         }
     }
