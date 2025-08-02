@@ -145,9 +145,9 @@ export class CameraSession {
             
             success('✅ Three.js scene setup complete');
             
-        } catch (error) {
-            error(`❌ Three.js setup failed: ${error.message}`);
-            throw error;
+        } catch (threeError) {
+            error(`❌ Three.js setup failed: ${threeError.message}`);
+            throw threeError;
         }
     }
 
@@ -291,19 +291,19 @@ export class CameraSession {
             this.showStatusMessage('✅ Camera session ready!');
             success('✅ Camera session started successfully');
             
-        } catch (error) {
-            error(`❌ Failed to start camera session: ${error.message}`);
-            this.showStatusMessage(`❌ Camera error: ${error.message}`, 'error');
+        } catch (cameraError) {
+            error(`❌ Failed to start camera session: ${cameraError.message}`);
+            this.showStatusMessage(`❌ Camera error: ${cameraError.message}`, 'error');
             
             // Provide specific error messages
-            if (error.name === 'NotAllowedError') {
+            if (cameraError.name === 'NotAllowedError') {
                 throw new Error('Camera access was denied. Please allow camera permissions and try again.');
-            } else if (error.name === 'NotFoundError') {
+            } else if (cameraError.name === 'NotFoundError') {
                 throw new Error('No camera found on this device.');
-            } else if (error.name === 'NotSupportedError') {
+            } else if (cameraError.name === 'NotSupportedError') {
                 throw new Error('Camera access not supported on this device or browser.');
             } else {
-                throw new Error(`Camera session failed: ${error.message}`);
+                throw new Error(`Camera session failed: ${cameraError.message}`);
             }
         }
     }
