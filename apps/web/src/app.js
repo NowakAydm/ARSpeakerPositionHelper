@@ -330,6 +330,15 @@ class ARSpeakerApp {
             
             console.log('✅ Camera session started');
             
+            // Expose debug method to global scope for testing
+            window.debugCamera = () => {
+                if (this.cameraSession) {
+                    this.cameraSession.debugCameraStatus();
+                } else {
+                    console.log('❌ No camera session active');
+                }
+            };
+            
         } catch (error) {
             console.error('❌ Failed to start camera session:', error);
             this.handleCameraError(error);

@@ -14,8 +14,33 @@ export class UserInteraction {
         this.listeners = new Map();
         this.container = null;
         this.cameraSession = null;
-        this.markers = [];
-        this.currentFrame = null;
+        this.mar    /**
+     * Cleanup and destroy interaction
+     */
+    destroy() {
+        this.isEnabled = false;
+        this.listeners.clear();
+        this.clearMarkers();
+        
+        // Remove event listeners from the correct target
+        const target = this.eventTarget || this.container;
+        if (target) {
+            // Remove event listeners (note: binding might not match, but this is cleanup)
+            try {
+                target.removeEventListener('touchstart', this.handleTouchStart);
+                target.removeEventListener('touchend', this.handleTouchEnd);
+                target.removeEventListener('click', this.handleClick);
+                target.removeEventListener('touchmove', this.handleTouchMove);
+                target.removeEventListener('gesturestart', this.handleGestureStart);
+                target.removeEventListener('gesturechange', this.handleGestureChange);
+                target.removeEventListener('gestureend', this.handleGestureEnd);
+            } catch (error) {
+                console.warn('⚠️ Error removing event listeners:', error);
+            }
+        }
+        
+        console.log('👆 Interaction destroyed');
+    }   this.currentFrame = null;
     }
 
     /**
@@ -27,6 +52,12 @@ export class UserInteraction {
         this.setupTouchListeners();
         this.setupMarkerSystem();
         this.isEnabled = true;
+        
+        // Show status message to user
+        if (this.cameraSession && this.cameraSession.showStatusMessage) {
+            this.cameraSession.showStatusMessage('👆 Touch controls ready!');
+        }
+        
         console.log('👆 Touch interaction initialized for camera session');
     }
 
@@ -65,27 +96,51 @@ export class UserInteraction {
     setupTouchListeners() {
         if (!this.container) return;
 
+        // Get the correct target for event binding
+        const eventTarget = this.getEventTarget();
+        
+        console.log('👆 Setting up touch listeners on:', eventTarget.tagName, eventTarget.className);
+
         // Handle touch events
-        this.container.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-        this.container.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
-        this.container.addEventListener('click', this.handleClick.bind(this), { passive: false });
+        eventTarget.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+        eventTarget.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
+        eventTarget.addEventListener('click', this.handleClick.bind(this), { passive: false });
 
         // Prevent default touch behaviors that interfere with AR
-        this.container.addEventListener('touchmove', (e) => {
+        eventTarget.addEventListener('touchmove', (e) => {
             e.preventDefault();
         }, { passive: false });
         
-        this.container.addEventListener('gesturestart', (e) => {
+        eventTarget.addEventListener('gesturestart', (e) => {
             e.preventDefault();
         }, { passive: false });
         
-        this.container.addEventListener('gesturechange', (e) => {
+        eventTarget.addEventListener('gesturechange', (e) => {
             e.preventDefault();
         }, { passive: false });
         
-        this.container.addEventListener('gestureend', (e) => {
+        eventTarget.addEventListener('gestureend', (e) => {
             e.preventDefault();
         }, { passive: false });
+
+        // Store reference for cleanup
+        this.eventTarget = eventTarget;
+    }
+
+    /**
+     * Get the correct target for event binding
+     */
+    getEventTarget() {
+        // If camera session is available and has an interaction target, use that
+        if (this.cameraSession && this.cameraSession.getInteractionTarget) {
+            const target = this.cameraSession.getInteractionTarget();
+            if (target) {
+                return target;
+            }
+        }
+        
+        // Fall back to container
+        return this.container;
     }
 
     /**
@@ -147,6 +202,14 @@ export class UserInteraction {
      */
     async handleTap(x, y) {
         console.log(`🎯 Tap detected at: (${x}, ${y})`);
+
+        // Show visual feedback immediately
+        this.showTapConfirmation(x, y);
+        
+        // Show status message
+        if (this.cameraSession && this.cameraSession.showStatusMessage) {
+            this.cameraSession.showStatusMessage(`🎯 Tap at (${Math.round(x)}, ${Math.round(y)})`);
+        }
 
         try {
             // Convert screen coordinates to AR world coordinates
@@ -334,6 +397,57 @@ export class UserInteraction {
     }
 
     /**
+     * Show visual confirmation for successful tap
+     */
+    showTapConfirmation(x, y) {
+        const feedback = document.createElement('div');
+        feedback.style.cssText = `
+            position: fixed;
+            left: ${x - 15}px;
+            top: ${y - 15}px;
+            width: 30px;
+            height: 30px;
+            background: rgba(0, 255, 0, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1001;
+            animation: tapConfirm 0.4s ease-out forwards;
+        `;
+        
+        // Add CSS animation if not already present
+        if (!document.querySelector('#tapConfirmStyles')) {
+            const style = document.createElement('style');
+            style.id = 'tapConfirmStyles';
+            style.textContent = `
+                @keyframes tapConfirm {
+                    0% {
+                        transform: scale(1);
+                        opacity: 0.8;
+                    }
+                    50% {
+                        transform: scale(1.5);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: scale(0.5);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(feedback);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (feedback.parentNode) {
+                feedback.parentNode.removeChild(feedback);
+            }
+        }, 400);
+    }
+
+    /**
      * Show feedback when no valid AR surface is found
      */
     showInvalidTargetFeedback(x, y) {
@@ -462,18 +576,28 @@ export class UserInteraction {
     }
 
     /**
-     * Cleanup interaction
+     * Cleanup and destroy interaction
      */
     destroy() {
         this.isEnabled = false;
         this.listeners.clear();
         this.clearMarkers();
         
-        if (this.container) {
-            // Remove event listeners
-            this.container.removeEventListener('touchstart', this.handleTouchStart);
-            this.container.removeEventListener('touchend', this.handleTouchEnd);
-            this.container.removeEventListener('click', this.handleClick);
+        // Remove event listeners from the correct target
+        const target = this.eventTarget || this.container;
+        if (target) {
+            // Remove event listeners (note: binding might not match, but this is cleanup)
+            try {
+                target.removeEventListener('touchstart', this.handleTouchStart);
+                target.removeEventListener('touchend', this.handleTouchEnd);
+                target.removeEventListener('click', this.handleClick);
+                target.removeEventListener('touchmove', this.handleTouchMove);
+                target.removeEventListener('gesturestart', this.handleGestureStart);
+                target.removeEventListener('gesturechange', this.handleGestureChange);
+                target.removeEventListener('gestureend', this.handleGestureEnd);
+            } catch (error) {
+                console.warn('⚠️ Error removing event listeners:', error);
+            }
         }
         
         console.log('👆 Interaction destroyed');

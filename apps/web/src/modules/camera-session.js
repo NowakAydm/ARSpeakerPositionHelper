@@ -88,13 +88,18 @@ export class CameraSession {
             this.canvas.style.position = 'absolute';
             this.canvas.style.top = '0';
             this.canvas.style.left = '0';
+            this.canvas.style.width = '100%';
+            this.canvas.style.height = '100%';
             this.canvas.style.zIndex = '1';
             this.canvas.style.pointerEvents = 'none';
+            this.canvas.style.objectFit = 'cover';
             
             // 3D renderer goes on top
             this.renderer.domElement.style.position = 'absolute';
             this.renderer.domElement.style.top = '0';
             this.renderer.domElement.style.left = '0';
+            this.renderer.domElement.style.width = '100%';
+            this.renderer.domElement.style.height = '100%';
             this.renderer.domElement.style.zIndex = '2';
             this.renderer.domElement.style.pointerEvents = 'auto';
 
@@ -114,6 +119,8 @@ export class CameraSession {
                 this.container.innerHTML = '';
                 this.container.appendChild(this.canvas);
                 this.container.appendChild(this.renderer.domElement);
+                // Add camera-active class for proper styling
+                this.container.classList.add('camera-active');
             } else {
                 throw new Error('Camera container element not found');
             }
@@ -211,6 +218,7 @@ export class CameraSession {
             };
 
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            this.showStatusMessage('📹 Camera access granted!');
 
             // Create video element
             this.video = document.createElement('video');
@@ -218,16 +226,44 @@ export class CameraSession {
             this.video.autoplay = true;
             this.video.playsInline = true;
             this.video.muted = true;
+            this.video.style.display = 'none'; // Hide the video element since we draw to canvas
 
-            // Wait for video to load
+            // Wait for video to load and be ready to play
             await new Promise((resolve, reject) => {
-                this.video.addEventListener('loadedmetadata', resolve);
-                this.video.addEventListener('error', reject);
-                setTimeout(reject, 5000); // Timeout after 5 seconds
+                const timeout = setTimeout(() => reject(new Error('Video loading timeout')), 10000);
+                
+                const handleSuccess = () => {
+                    clearTimeout(timeout);
+                    this.video.removeEventListener('loadedmetadata', handleSuccess);
+                    this.video.removeEventListener('canplay', handleSuccess);
+                    this.video.removeEventListener('error', handleError);
+                    console.log(`📹 Video ready: ${this.video.videoWidth}x${this.video.videoHeight}`);
+                    this.showStatusMessage(`📱 Video loaded: ${this.video.videoWidth}x${this.video.videoHeight}`);
+                    resolve();
+                };
+                
+                const handleError = (error) => {
+                    clearTimeout(timeout);
+                    this.video.removeEventListener('loadedmetadata', handleSuccess);
+                    this.video.removeEventListener('canplay', handleSuccess);
+                    this.video.removeEventListener('error', handleError);
+                    reject(error);
+                };
+                
+                this.video.addEventListener('loadedmetadata', handleSuccess);
+                this.video.addEventListener('canplay', handleSuccess);
+                this.video.addEventListener('error', handleError);
             });
 
             // Setup camera background rendering
             this.setupCameraBackground();
+
+            // Add debug info
+            console.log('📹 Video element created:', {
+                videoWidth: this.video.videoWidth,
+                videoHeight: this.video.videoHeight,
+                readyState: this.video.readyState
+            });
 
             // Request device orientation permission on iOS
             await this.requestOrientationPermission();
@@ -236,10 +272,12 @@ export class CameraSession {
             this.startRenderLoop();
 
             this.isActive = true;
+            this.showStatusMessage('✅ Camera session ready!');
             console.log('✅ Camera session started successfully');
             
         } catch (error) {
             console.error('❌ Failed to start camera session:', error);
+            this.showStatusMessage(`❌ Camera error: ${error.message}`, 'error');
             
             // Provide specific error messages
             if (error.name === 'NotAllowedError') {
@@ -259,17 +297,46 @@ export class CameraSession {
      */
     setupCameraBackground() {
         const ctx = this.canvas.getContext('2d');
-        this.canvas.width = this.video.videoWidth || 1280;
-        this.canvas.height = this.video.videoHeight || 720;
         
-        // Resize canvas to match container
-        this.canvas.style.width = '100%';
-        this.canvas.style.height = '100%';
-        this.canvas.style.objectFit = 'cover';
+        // Wait for video metadata to load before setting canvas dimensions
+        const setupCanvas = () => {
+            if (this.video.videoWidth && this.video.videoHeight) {
+                this.canvas.width = this.video.videoWidth;
+                this.canvas.height = this.video.videoHeight;
+                
+                // Resize canvas to match container
+                this.canvas.style.width = '100%';
+                this.canvas.style.height = '100%';
+                this.canvas.style.objectFit = 'cover';
+                this.canvas.style.display = 'block';
+                
+                console.log(`📐 Canvas setup: ${this.canvas.width}x${this.canvas.height}`);
+            } else {
+                // Fallback dimensions
+                this.canvas.width = 1280;
+                this.canvas.height = 720;
+                this.canvas.style.width = '100%';
+                this.canvas.style.height = '100%';
+                this.canvas.style.objectFit = 'cover';
+                this.canvas.style.display = 'block';
+                
+                console.warn('⚠️ Using fallback canvas dimensions');
+            }
+        };
+
+        // Setup canvas dimensions
+        setupCanvas();
+        
+        // Listen for video resize events
+        this.video.addEventListener('resize', setupCanvas);
 
         const drawFrame = () => {
-            if (this.video && this.video.readyState >= 2) {
-                ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+            if (this.video && this.video.readyState >= 2 && this.canvas.width > 0 && this.canvas.height > 0) {
+                try {
+                    ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                } catch (error) {
+                    console.warn('⚠️ Frame drawing error:', error);
+                }
             }
         };
 
@@ -347,6 +414,21 @@ export class CameraSession {
             this.orientationHandler = null;
         }
 
+        // Remove camera-active class and restore placeholder
+        if (this.container) {
+            this.container.classList.remove('camera-active');
+            // Restore placeholder content
+            this.container.innerHTML = `
+                <div class="ar-placeholder">
+                    <div class="placeholder-content">
+                        <div class="placeholder-icon">📱</div>
+                        <h2>Camera View</h2>
+                        <p>Click "Start Camera Session" to begin detecting speakers</p>
+                    </div>
+                </div>
+            `;
+        }
+
         console.log('✅ Camera session stopped');
     }
 
@@ -406,9 +488,132 @@ export class CameraSession {
     }
 
     /**
+     * Get the element that should receive touch/click events
+     */
+    getInteractionTarget() {
+        // Return the renderer's DOM element since it's on top and has pointer events enabled
+        return this.renderer ? this.renderer.domElement : this.container;
+    }
+
+    /**
      * Set frame callback for render loop
      */
     setFrameCallback(callback) {
         this.frameCallback = callback;
+    }
+
+    /**
+     * Debug method to check camera preview status
+     */
+    debugCameraStatus() {
+        const status = {
+            isActive: this.isActive,
+            hasStream: !!this.stream,
+            hasVideo: !!this.video,
+            videoReady: this.video ? this.video.readyState >= 2 : false,
+            videoDimensions: this.video ? `${this.video.videoWidth}x${this.video.videoHeight}` : 'N/A',
+            hasCanvas: !!this.canvas,
+            canvasDimensions: this.canvas ? `${this.canvas.width}x${this.canvas.height}` : 'N/A',
+            hasRenderer: !!this.renderer,
+            containerHasElements: this.container ? this.container.children.length : 0,
+            containerClasses: this.container ? this.container.className : 'N/A'
+        };
+        
+        console.log('🔍 Camera Session Debug Status:', status);
+        
+        // Also show visual debug info on screen
+        this.showDebugPanel(status);
+        return status;
+    }
+
+    /**
+     * Show debug information visually on the screen
+     */
+    showDebugPanel(status) {
+        // Remove existing debug panel
+        const existingPanel = document.getElementById('camera-debug-panel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+
+        // Create debug panel
+        const debugPanel = document.createElement('div');
+        debugPanel.id = 'camera-debug-panel';
+        debugPanel.style.cssText = `
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9999;
+            max-width: 300px;
+            line-height: 1.4;
+            border: 1px solid #333;
+        `;
+
+        const statusText = Object.entries(status)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n');
+
+        debugPanel.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 5px; color: #00ff00;">📱 Camera Debug Info</div>
+            <pre style="margin: 0; white-space: pre-wrap;">${statusText}</pre>
+            <button onclick="this.parentElement.remove()" style="
+                margin-top: 5px;
+                background: #ff4444;
+                color: white;
+                border: none;
+                padding: 2px 8px;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 10px;
+            ">Close</button>
+        `;
+
+        document.body.appendChild(debugPanel);
+
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            if (debugPanel.parentElement) {
+                debugPanel.remove();
+            }
+        }, 10000);
+    }
+
+    /**
+     * Show a simple status message on screen
+     */
+    showStatusMessage(message, type = 'info') {
+        const statusDiv = document.createElement('div');
+        statusDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: ${type === 'error' ? 'rgba(255, 0, 0, 0.9)' : 'rgba(0, 100, 255, 0.9)'};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 10000;
+            text-align: center;
+            max-width: 80%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        
+        statusDiv.textContent = message;
+        document.body.appendChild(statusDiv);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (statusDiv.parentElement) {
+                statusDiv.remove();
+            }
+        }, 3000);
     }
 }

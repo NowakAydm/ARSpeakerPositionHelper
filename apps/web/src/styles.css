@@ -59,6 +59,16 @@ html, body {
     justify-content: center;
 }
 
+/* When camera is active, make container fill space properly */
+.ar-container.camera-active {
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+.ar-container.camera-active .ar-placeholder {
+    display: none;
+}
+
 .ar-placeholder {
     text-align: center;
     color: #666;
@@ -137,6 +147,24 @@ html, body {
     border-color: #444;
     color: #888;
     cursor: not-allowed;
+}
+
+.debug-button {
+    background: linear-gradient(135deg, #ff6b00 0%, #cc5500 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 80px;
+    flex: 0 0 auto;
+}
+
+.debug-button:hover {
+    background: linear-gradient(135deg, #ff7f1a 0%, #e55f00 100%);
+    transform: translateY(-1px);
 }
 
 /* Instructions Panel */
