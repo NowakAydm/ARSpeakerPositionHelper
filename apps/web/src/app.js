@@ -150,25 +150,7 @@ class ARSpeakerApp {
             // Create camera session instance but don't start it yet
             this.cameraSession = new CameraSession();
             this.debugSuccess('Camera session object created');
-            
-            // Test camera permissions
-            try {
-                await navigator.mediaDevices.getUserMedia({ video: true });
-                this.debugSuccess('Camera permission granted');
-                
-                // Stop the test stream immediately
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                stream.getTracks().forEach(track => track.stop());
-                
-            } catch (permissionError) {
-                if (permissionError.name === 'NotAllowedError') {
-                    this.debugWarning('Camera permission denied by user');
-                } else if (permissionError.name === 'NotFoundError') {
-                    this.debugWarning('No camera device found');
-                } else {
-                    this.debugWarning(`Camera permission test failed: ${permissionError.message}`);
-                }
-            }
+            this.debugInfo('Camera permissions will be requested when user starts session');
             
         } catch (error) {
             this.debugError(`Camera session initialization failed: ${error.message}`);
@@ -390,6 +372,21 @@ class ARSpeakerApp {
             
         } catch (error) {
             this.debugError(`Failed to start camera session: ${error.message}`);
+            
+            // Check if error is due to camera not being available
+            if (error.message.includes('No camera found') || 
+                error.message.includes('Camera access was denied') ||
+                error.message.includes('Camera access not supported')) {
+                
+                this.debugInfo('📱 Camera not available, offering manual mode...');
+                
+                // Offer manual mode as fallback
+                if (confirm(`Camera is not available: ${error.message}\n\nWould you like to continue in manual mode? You can click to place speakers and set your listening position.`)) {
+                    this.startManualSession();
+                    return;
+                }
+            }
+            
             this.showError(`Camera session failed: ${error.message}`);
             
             // Reset UI on failure
