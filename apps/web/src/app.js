@@ -42,8 +42,44 @@ class ARSpeakerApp {
                     startButton.disabled = false;
                     startButton.textContent = 'Start Camera Session';
                 }
+                
+                // Enable reset button as well
+                const resetButton = document.getElementById('reset');
+                if (resetButton && resetButton.disabled) {
+                    resetButton.disabled = false;
+                }
+                
+                console.log('🆘 Emergency fallback - all buttons enabled');
             }
         }, 20000); // 20 second emergency timeout
+    }
+
+    /**
+     * Enable essential buttons immediately to prevent user lockout
+     * This runs before any initialization that might fail
+     */
+    enableEssentialButtonsImmediate() {
+        console.log('🚨 Enabling essential buttons immediately...');
+        
+        const startButton = document.getElementById('start-ar');
+        const resetButton = document.getElementById('reset');
+        
+        if (startButton) {
+            startButton.disabled = false;
+            startButton.textContent = 'Start Camera Session';
+            console.log('✅ Start button enabled immediately');
+        }
+        
+        if (resetButton) {
+            resetButton.disabled = false;
+            console.log('✅ Reset button enabled immediately');
+        }
+        
+        // Update status if element exists
+        const statusElement = document.getElementById('ar-status');
+        if (statusElement) {
+            statusElement.textContent = 'Initializing...';
+        }
     }
 
     /**
@@ -52,6 +88,9 @@ class ARSpeakerApp {
      */
     async init() {
         console.log('🚀 Initializing Camera AR Speaker Position Helper');
+        
+        // Immediately enable essential buttons to prevent lockout
+        this.enableEssentialButtonsImmediate();
         
         try {
             // Initialize UI elements first - this should always work
@@ -63,6 +102,9 @@ class ARSpeakerApp {
             
             // Setup event listeners
             this.setupEventListeners();
+            
+            // Ensure buttons are enabled immediately after UI setup
+            this.enableInitialButtons();
             
             console.log('🔘 Button state after init:');
             console.log('  - Disabled:', this.elements.startButton.disabled);
@@ -113,6 +155,19 @@ class ARSpeakerApp {
                 }
             };
             
+            // Global button enabler for all buttons
+            window.enableAllButtons = () => {
+                console.log('🔧 Enabling all buttons...');
+                const buttons = ['start-ar', 'calibrate', 'reset'];
+                buttons.forEach(buttonId => {
+                    const button = document.getElementById(buttonId);
+                    if (button) {
+                        button.disabled = false;
+                        console.log(`✅ ${buttonId} enabled`);
+                    }
+                });
+            };
+            
             // Manual camera starter for debugging
             window.startCamera = () => {
                 console.log('🎥 Manually starting camera...');
@@ -141,7 +196,22 @@ class ARSpeakerApp {
                     this.updateStatus('Ready - Click Start Camera Session');
                     console.log('✅ App ready - button enabled');
                 }
+                
+                // Also enable other buttons that should be available by default
+                if (this.elements.resetButton) {
+                    this.elements.resetButton.disabled = false;
+                }
+                
+                console.log('✅ All buttons enabled - app is ready');
             }, 1000); // Small delay to show completed state
+            
+            // Immediate fallback to ensure buttons are enabled even if timeout fails
+            if (this.elements.startButton && this.elements.startButton.disabled) {
+                console.log('🔧 Immediately enabling start button as fallback');
+                this.elements.startButton.disabled = false;
+                this.elements.startButton.textContent = 'Start Camera Session';
+                this.updateStatus('Ready - Click Start Camera Session');
+            }
         }
     }
     
@@ -292,6 +362,31 @@ class ARSpeakerApp {
         
         // Setup UI interactions
         this.setupUIInteractions();
+    }
+
+    /**
+     * Enable initial buttons that should be available immediately
+     */
+    enableInitialButtons() {
+        console.log('🔘 Enabling initial buttons...');
+        
+        // Enable start button
+        if (this.elements.startButton) {
+            this.elements.startButton.disabled = false;
+            this.elements.startButton.textContent = 'Start Camera Session';
+            console.log('✅ Start button enabled');
+        }
+        
+        // Enable reset button (should always be available)
+        if (this.elements.resetButton) {
+            this.elements.resetButton.disabled = false;
+            console.log('✅ Reset button enabled');
+        }
+        
+        // Update status
+        this.updateStatus('Ready - Click Start Camera Session');
+        
+        console.log('🎯 Initial buttons enabled successfully');
     }
 
     /**
