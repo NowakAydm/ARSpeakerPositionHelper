@@ -19,7 +19,31 @@ class ARSpeakerApp {
         this.speakers = [];
         this.userPosition = null;
         
+        // Set up emergency fallback to prevent infinite loading
+        this.setupEmergencyFallback();
+        
         this.init();
+    }
+
+    /**
+     * Emergency fallback to ensure loading screen never hangs indefinitely
+     */
+    setupEmergencyFallback() {
+        setTimeout(() => {
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement && loadingElement.style.display !== 'none') {
+                console.warn('⚠️ Emergency fallback triggered - forcing app to load');
+                this.hideLoading();
+                this.showNotification('App loaded with limited functionality. Some features may be unavailable.', 'warning', 8000);
+                
+                // Enable basic functionality
+                const startButton = document.getElementById('start-ar');
+                if (startButton && startButton.disabled) {
+                    startButton.disabled = false;
+                    startButton.textContent = 'Start Camera Session';
+                }
+            }
+        }, 20000); // 20 second emergency timeout
     }
 
     /**
@@ -32,28 +56,26 @@ class ARSpeakerApp {
         try {
             // Initialize UI elements first - this should always work
             this.initializeUI();
+            this.updateLoadingProgress('ui', 'completed');
             
-            // Initialize object detection with error handling
-            try {
-                this.objectDetection = new ObjectDetection();
-                await this.objectDetection.loadModel();
-                console.log('✅ Object detection initialized');
-            } catch (detectionError) {
-                console.warn('⚠️ Object detection failed to initialize:', detectionError);
-                // Continue without object detection - it's not critical for basic functionality
-                this.objectDetection = null;
-            }
-            
-            // Initialize triangle calculator
+            // Initialize triangle calculator (lightweight, should always work)
             this.triangleCalculator = new TriangleCalculator();
             
-            // Check camera support with comprehensive error handling
-            await this.checkCameraSupport();
+            // Skip camera support check - we'll check when user clicks start
+            this.updateLoadingProgress('camera', 'completed');
+            this.elements.startButton.disabled = false;
+            this.elements.startButton.textContent = 'Start Camera Session';
+            this.updateStatus('Ready - Click Start Camera Session');
             
             // Setup event listeners
             this.setupEventListeners();
             
             console.log('✅ Application initialized successfully');
+            
+            // Initialize object detection in background with timeout
+            // Don't let this block the main initialization
+            this.updateLoadingProgress('detection', 'active');
+            this.initializeDetectionInBackground();
             
         } catch (error) {
             console.error('❌ Failed to initialize application:', error);
@@ -62,7 +84,87 @@ class ARSpeakerApp {
             this.showError(userMessage);
         } finally {
             // Always hide loading overlay, regardless of success or failure
-            this.hideLoading();
+            setTimeout(() => this.hideLoading(), 1000); // Small delay to show completed state
+        }
+    }
+    
+    /**
+     * Update loading progress indicators
+     */
+    updateLoadingProgress(step, status) {
+        const stepElement = document.getElementById(`step-${step}`);
+        if (stepElement) {
+            stepElement.classList.remove('active', 'completed');
+            if (status) {
+                stepElement.classList.add(status);
+            }
+            
+            // Update step text based on status
+            const stepTexts = {
+                'ui': {
+                    'active': '⏳ Setting up UI...',
+                    'completed': '✓ UI Ready'
+                },
+                'camera': {
+                    'active': '⏳ Preparing camera...',
+                    'completed': '✓ Ready for camera access'
+                },
+                'detection': {
+                    'active': '⏳ Loading AI models...',
+                    'completed': '✓ AI Models Ready'
+                }
+            };
+            
+            if (stepTexts[step] && stepTexts[step][status]) {
+                stepElement.textContent = stepTexts[step][status];
+            }
+        }
+    }
+    
+    /**
+     * Initialize object detection in background with timeout
+     * This prevents the loading screen from hanging on TensorFlow.js issues
+     */
+    async initializeDetectionInBackground() {
+        try {
+            console.log('🔄 Loading object detection in background...');
+            
+            // Add timeout to prevent hanging
+            const detectionPromise = new Promise(async (resolve, reject) => {
+                try {
+                    this.objectDetection = new ObjectDetection();
+                    await this.objectDetection.loadModel();
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            });
+            
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Detection model loading timeout')), 15000);
+            });
+            
+            await Promise.race([detectionPromise, timeoutPromise]);
+            console.log('✅ Object detection initialized');
+            this.updateLoadingProgress('detection', 'completed');
+            
+        } catch (detectionError) {
+            console.warn('⚠️ Object detection failed to initialize:', detectionError);
+            this.objectDetection = null;
+            
+            // Update progress to show it's done (even if failed)
+            this.updateLoadingProgress('detection', 'completed');
+            const stepElement = document.getElementById('step-detection');
+            if (stepElement) {
+                stepElement.textContent = '⚠️ AI models unavailable';
+                stepElement.style.color = '#ff9500';
+            }
+            
+            // Update UI to inform user
+            this.updateStatus('Camera ready (manual mode)');
+            
+            // Show non-blocking notification
+            this.showNotification('Object detection unavailable. You can still use manual speaker placement.', 'warning');
         }
     }
     
@@ -95,11 +197,15 @@ class ARSpeakerApp {
             positionStatus: document.getElementById('position-status'),
             triangleQuality: document.getElementById('triangle-quality'),
             loading: document.getElementById('loading'),
+            loadingMessage: document.getElementById('loading-message'),
             errorModal: document.getElementById('error-modal'),
             errorMessage: document.getElementById('error-message'),
             errorClose: document.getElementById('error-close'),
             instructions: document.getElementById('instructions'),
             helpButton: document.getElementById('help-toggle'),
+            debugToggle: document.getElementById('debug-toggle'),
+            debugConsole: document.getElementById('debug-console'),
+            debugContent: document.getElementById('debug-content'),
             performanceMonitor: document.getElementById('performance'),
             fpsCounter: document.getElementById('fps-counter'),
             memoryUsage: document.getElementById('memory-usage')
@@ -117,17 +223,115 @@ class ARSpeakerApp {
         this.currentStep = 1;
         this.instructionsVisible = true;
         this.performanceMonitorEnabled = false;
+        this.debugConsoleVisible = false;
+        
+        // Setup debug console
+        this.setupDebugConsole();
         
         // Setup UI interactions
         this.setupUIInteractions();
     }
 
     /**
-     * Robust AR support detection with comprehensive error handling
-     * Provides clear user feedback for unsupported browsers and devices
+     * Setup debug console functionality
+     */
+    setupDebugConsole() {
+        // Store original console methods
+        this.originalConsole = {
+            log: console.log,
+            warn: console.warn,
+            error: console.error,
+            info: console.info
+        };
+        
+        // Override console methods to also log to debug console
+        const self = this;
+        
+        console.log = function(...args) {
+            self.originalConsole.log.apply(console, args);
+            self.addDebugMessage(args.join(' '), 'info');
+        };
+        
+        console.warn = function(...args) {
+            self.originalConsole.warn.apply(console, args);
+            self.addDebugMessage(args.join(' '), 'warning');
+        };
+        
+        console.error = function(...args) {
+            self.originalConsole.error.apply(console, args);
+            self.addDebugMessage(args.join(' '), 'error');
+        };
+        
+        console.info = function(...args) {
+            self.originalConsole.info.apply(console, args);
+            self.addDebugMessage(args.join(' '), 'info');
+        };
+        
+        // Show debug console initially for development
+        this.showDebugConsole();
+    }
+    
+    /**
+     * Add message to debug console
+     */
+    addDebugMessage(message, type = 'info') {
+        if (!this.elements.debugContent) return;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        const messageElement = document.createElement('div');
+        messageElement.className = `debug-message ${type}`;
+        messageElement.textContent = `[${timestamp}] ${message}`;
+        
+        this.elements.debugContent.appendChild(messageElement);
+        
+        // Auto-scroll to bottom
+        this.elements.debugContent.scrollTop = this.elements.debugContent.scrollHeight;
+        
+        // Limit to last 100 messages
+        const messages = this.elements.debugContent.children;
+        if (messages.length > 100) {
+            this.elements.debugContent.removeChild(messages[0]);
+        }
+    }
+    
+    /**
+     * Toggle debug console visibility
+     */
+    toggleDebugConsole() {
+        this.debugConsoleVisible = !this.debugConsoleVisible;
+        
+        if (this.debugConsoleVisible) {
+            this.showDebugConsole();
+        } else {
+            this.hideDebugConsole();
+        }
+    }
+    
+    /**
+     * Show debug console
+     */
+    showDebugConsole() {
+        this.debugConsoleVisible = true;
+        if (this.elements.debugConsole) {
+            this.elements.debugConsole.classList.remove('hidden');
+        }
+    }
+    
+    /**
+     * Hide debug console
+     */
+    hideDebugConsole() {
+        this.debugConsoleVisible = false;
+        if (this.elements.debugConsole) {
+            this.elements.debugConsole.classList.add('hidden');
+        }
+    }
+    /**
+     * Check camera support and request access when user clicks start
+     * This actually requests camera permissions instead of just checking availability
      */
     async checkCameraSupport() {
-        this.updateStatus('Checking camera support...');
+        this.updateStatus('Requesting camera access...');
         
         try {
             // Check if getUserMedia is available
@@ -138,29 +342,45 @@ class ARSpeakerApp {
                 return;
             }
 
-            // Test camera access without actually starting it
-            let isSupported = false;
+            // Actually request camera access
+            let stream = null;
             try {
-                // Quick test to see if camera enumeration works
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                isSupported = videoDevices.length > 0;
-            } catch (deviceError) {
-                console.warn('Camera device check failed:', deviceError);
-                // Assume camera is available but permissions might be needed
-                isSupported = true;
-            }
-            
-            this.isCameraSupported = isSupported;
-            
-            if (isSupported) {
-                this.updateStatus('Camera Ready');
-                this.elements.startButton.disabled = false;
-                this.elements.startButton.textContent = 'Start Camera Session';
-                console.log('✅ Camera support confirmed');
-            } else {
-                this.updateStatus('Camera not available');
-                this.showCameraUnsupportedMessage('No camera found on this device');
+                console.log('📷 Requesting camera access...');
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment', // Prefer back camera
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                // Stop the stream immediately - we just wanted to check permissions
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
+                this.isCameraSupported = true;
+                this.updateStatus('Camera access granted');
+                console.log('✅ Camera access granted');
+                
+            } catch (mediaError) {
+                console.warn('❌ Camera access failed:', mediaError);
+                this.isCameraSupported = false;
+                
+                if (mediaError.name === 'NotAllowedError' || mediaError.name === 'PermissionDeniedError') {
+                    this.updateStatus('Camera access denied');
+                    this.showCameraUnsupportedMessage('Camera access was denied by the user');
+                } else if (mediaError.name === 'NotFoundError' || mediaError.name === 'DevicesNotFoundError') {
+                    this.updateStatus('No camera found');
+                    this.showCameraUnsupportedMessage('No camera found on this device');
+                } else if (mediaError.name === 'NotSupportedError') {
+                    this.updateStatus('Camera not supported');
+                    this.showCameraUnsupportedMessage('Camera is not supported in this browser');
+                } else {
+                    this.updateStatus('Camera error');
+                    this.showCameraUnsupportedMessage(`Camera error: ${mediaError.message}`);
+                }
+                return;
             }
             
         } catch (error) {
@@ -245,6 +465,11 @@ class ARSpeakerApp {
             this.toggleInstructions();
         });
 
+        // Debug console toggle
+        this.elements.debugToggle?.addEventListener('click', () => {
+            this.toggleDebugConsole();
+        });
+
         // Handle window resize
         window.addEventListener('resize', () => {
             this.handleResize();
@@ -277,15 +502,21 @@ class ARSpeakerApp {
      * Start camera session with comprehensive error handling and user feedback
      */
     async startCameraSession() {
-        if (!this.isCameraSupported) {
-            this.showCameraUnsupportedMessage('Camera functionality is not available on this device or browser');
-            return;
-        }
-
         try {
+            this.updateStatus('Checking camera access...');
+            this.elements.startButton.disabled = true;
+            
+            // Check camera support when user actually wants to use it
+            await this.checkCameraSupport();
+            
+            if (!this.isCameraSupported) {
+                // Camera support check will show appropriate error message
+                this.elements.startButton.disabled = false;
+                return;
+            }
+
             this.updateStatus('Starting camera session...');
             this.updateInstructionStep(2);
-            this.elements.startButton.disabled = true;
             
             // Initialize camera session if not already done
             if (!this.cameraSession) {
@@ -902,6 +1133,58 @@ class ARSpeakerApp {
             this.elements.errorModal.classList.remove('hidden');
         }
         console.error('🚨 Error:', message);
+    }
+
+    /**
+     * Show a non-blocking notification to the user
+     */
+    showNotification(message, type = 'info', duration = 5000) {
+        // Create notification element if it doesn't exist
+        let notification = document.getElementById('notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 1rem;
+                right: 1rem;
+                background: #333;
+                color: white;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                z-index: 1000;
+                max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                transform: translateX(100%);
+                transition: transform 0.3s ease-out;
+                font-size: 0.9rem;
+                line-height: 1.4;
+            `;
+            document.body.appendChild(notification);
+        }
+        
+        // Set notification style based on type
+        const colors = {
+            info: '#007bff',
+            warning: '#ff9500',
+            error: '#dc3545',
+            success: '#28a745'
+        };
+        
+        notification.style.background = colors[type] || colors.info;
+        notification.textContent = message;
+        
+        // Show notification
+        requestAnimationFrame(() => {
+            notification.style.transform = 'translateX(0)';
+        });
+        
+        // Auto-hide after duration
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+        }, duration);
+        
+        console.log(`📢 ${type.toUpperCase()}: ${message}`);
     }
 
     hideError() {

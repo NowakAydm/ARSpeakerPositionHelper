@@ -30,21 +30,30 @@ export class ObjectDetection {
             
             // Set backend to webgl for better performance, fallback to cpu
             try {
-                await window.tf.setBackend('webgl');
+                await Promise.race([
+                    window.tf.setBackend('webgl'),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Backend setup timeout')), 5000))
+                ]);
             } catch (webglError) {
                 console.warn('⚠️ WebGL backend not available, falling back to CPU:', webglError);
                 await window.tf.setBackend('cpu');
             }
             await window.tf.ready();
             
-            // Load COCO-SSD model for object detection
+            // Load COCO-SSD model for object detection with timeout
             if (!window.cocoSsd) {
                 throw new Error('COCO-SSD model not loaded. Please check your internet connection.');
             }
             
-            this.model = await window.cocoSsd.load({
+            const modelPromise = window.cocoSsd.load({
                 base: 'mobilenet_v2' // Optimized for mobile devices
             });
+            
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Model loading timeout (10s)')), 10000);
+            });
+            
+            this.model = await Promise.race([modelPromise, timeoutPromise]);
             
             this.isLoaded = true;
             console.log('✅ Object detection model loaded');

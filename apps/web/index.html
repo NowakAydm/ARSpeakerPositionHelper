@@ -82,7 +82,7 @@
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h3>Start Camera Session</h3>
-                        <p>Click "Start Camera Session" to begin and allow camera access</p>
+                        <p>Click "Start Camera Session" to request camera access and begin</p>
                     </div>
                 </div>
                 <div class="instruction-step" data-step="2">
@@ -142,7 +142,21 @@
 
             <!-- Help Toggle -->
             <button id="help-toggle" class="help-button" title="Toggle Instructions">?</button>
+            
+            <!-- Debug Console Toggle -->
+            <button id="debug-toggle" class="debug-console-toggle" title="Toggle Debug Console">🔍</button>
         </main>
+
+        <!-- Debug Console -->
+        <div id="debug-console" class="debug-console">
+            <div class="debug-header">
+                <span>Debug Console</span>
+                <button class="debug-close" onclick="document.getElementById('debug-console').classList.add('hidden')">×</button>
+            </div>
+            <div class="debug-content" id="debug-content">
+                <div class="debug-message info">[Debug] Console initialized - you can see all app messages here</div>
+            </div>
+        </div>
 
         <!-- Footer -->
         <footer class="app-footer">
@@ -152,8 +166,15 @@
 
     <!-- Loading Overlay -->
     <div id="loading" class="loading-overlay">
+        <button class="loading-close" onclick="document.getElementById('loading').style.display='none'" title="Hide loading panel">×</button>
         <div class="loading-spinner"></div>
-        <p>Loading camera capabilities...</p>
+        <p id="loading-message">Initializing camera capabilities...</p>
+        <div class="loading-progress">
+            <div class="progress-step" id="step-ui">⏳ Setting up UI...</div>
+            <div class="progress-step" id="step-camera">⏳ Preparing camera...</div>
+            <div class="progress-step" id="step-detection">⏳ Loading AI models...</div>
+        </div>
+        <p class="loading-hint">Camera access will be requested when you click Start</p>
     </div>
 
     <!-- Error Modal -->
