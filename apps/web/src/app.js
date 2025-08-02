@@ -61,16 +61,63 @@ class ARSpeakerApp {
             // Initialize triangle calculator (lightweight, should always work)
             this.triangleCalculator = new TriangleCalculator();
             
-            // Skip camera support check - we'll check when user clicks start
-            this.updateLoadingProgress('camera', 'completed');
-            this.elements.startButton.disabled = false;
-            this.elements.startButton.textContent = 'Start Camera Session';
-            this.updateStatus('Ready - Click Start Camera Session');
-            
             // Setup event listeners
             this.setupEventListeners();
             
+            console.log('🔘 Button state after init:');
+            console.log('  - Disabled:', this.elements.startButton.disabled);
+            console.log('  - Text:', this.elements.startButton.textContent);
+            console.log('  - Element:', this.elements.startButton);
+            console.log('  - Style display:', getComputedStyle(this.elements.startButton).display);
+            console.log('  - Style visibility:', getComputedStyle(this.elements.startButton).visibility);
+            console.log('  - Style pointer-events:', getComputedStyle(this.elements.startButton).pointerEvents);
+            console.log('  - Offset dimensions:', {
+                width: this.elements.startButton.offsetWidth,
+                height: this.elements.startButton.offsetHeight,
+                top: this.elements.startButton.offsetTop,
+                left: this.elements.startButton.offsetLeft
+            });
+            
             console.log('✅ Application initialized successfully');
+            
+            // Expose debug function to global scope
+            window.debugApp = () => {
+                console.log('🔍 App Debug Info:');
+                console.log('  - Camera supported:', this.isCameraSupported);
+                console.log('  - Camera session:', this.cameraSession);
+                console.log('  - Object detection:', this.objectDetection);
+                console.log('  - Start button:', this.elements.startButton);
+                console.log('  - Start button disabled:', this.elements.startButton?.disabled);
+                console.log('  - Start button text:', this.elements.startButton?.textContent);
+                console.log('  - Current step:', this.currentStep);
+                console.log('  - Elements:', this.elements);
+                
+                // Try clicking the button programmatically
+                if (this.elements.startButton) {
+                    console.log('🧪 Simulating button click...');
+                    this.elements.startButton.click();
+                } else {
+                    console.error('❌ Start button not available for click simulation');
+                }
+            };
+            
+            // Manual button enabler for debugging
+            window.enableButton = () => {
+                console.log('🔧 Manually enabling start button...');
+                if (this.elements.startButton) {
+                    this.elements.startButton.disabled = false;
+                    this.elements.startButton.textContent = 'Start Camera Session';
+                    console.log('✅ Button enabled');
+                } else {
+                    console.error('❌ Start button not found');
+                }
+            };
+            
+            // Manual camera starter for debugging
+            window.startCamera = () => {
+                console.log('🎥 Manually starting camera...');
+                this.startCameraSession();
+            };
             
             // Initialize object detection in background with timeout
             // Don't let this block the main initialization
@@ -84,7 +131,17 @@ class ARSpeakerApp {
             this.showError(userMessage);
         } finally {
             // Always hide loading overlay, regardless of success or failure
-            setTimeout(() => this.hideLoading(), 1000); // Small delay to show completed state
+            setTimeout(() => {
+                this.hideLoading();
+                
+                // Enable start button and set initial status after loading completes
+                if (this.elements.startButton) {
+                    this.elements.startButton.disabled = false;
+                    this.elements.startButton.textContent = 'Start Camera Session';
+                    this.updateStatus('Ready - Click Start Camera Session');
+                    console.log('✅ App ready - button enabled');
+                }
+            }, 1000); // Small delay to show completed state
         }
     }
     
@@ -104,10 +161,6 @@ class ARSpeakerApp {
                 'ui': {
                     'active': '⏳ Setting up UI...',
                     'completed': '✓ UI Ready'
-                },
-                'camera': {
-                    'active': '⏳ Preparing camera...',
-                    'completed': '✓ Ready for camera access'
                 },
                 'detection': {
                     'active': '⏳ Loading AI models...',
@@ -215,9 +268,18 @@ class ARSpeakerApp {
         const requiredElements = ['startButton', 'arContainer', 'arStatus'];
         for (const elementKey of requiredElements) {
             if (!this.elements[elementKey]) {
+                console.error(`❌ Required UI element not found: ${elementKey}`);
                 throw new Error(`Required UI element not found: ${elementKey}`);
+            } else {
+                console.log(`✅ Found element: ${elementKey}`, this.elements[elementKey]);
             }
         }
+
+        // Log all elements for debugging
+        console.log('📋 All UI elements found:');
+        Object.keys(this.elements).forEach(key => {
+            console.log(`  - ${key}:`, this.elements[key] ? '✅ Found' : '❌ Missing');
+        });
 
         // Initialize UI state
         this.currentStep = 1;
@@ -436,22 +498,38 @@ class ARSpeakerApp {
     }
 
     setupEventListeners() {
+        console.log('🎯 Setting up event listeners...');
+        
         // Start Camera button
-        this.elements.startButton.addEventListener('click', () => {
-            if (this.cameraSession) {
-                this.stopCameraSession();
-            } else {
-                this.startCameraSession();
-            }
-        });
+        if (this.elements.startButton) {
+            console.log('✅ Start button found, adding click listener');
+            this.elements.startButton.addEventListener('click', () => {
+                console.log('🔘 Start button clicked!');
+                console.log('📊 Current camera session state:', this.cameraSession ? 'exists' : 'null');
+                console.log('📊 Button disabled state:', this.elements.startButton.disabled);
+                console.log('📊 Button text:', this.elements.startButton.textContent);
+                
+                if (this.cameraSession) {
+                    console.log('🛑 Stopping camera session...');
+                    this.stopCameraSession();
+                } else {
+                    console.log('▶️ Starting camera session...');
+                    this.startCameraSession();
+                }
+            });
+        } else {
+            console.error('❌ Start button not found!');
+        }
 
         // Calibrate button
         this.elements.calibrateButton?.addEventListener('click', () => {
+            console.log('🎯 Calibrate button clicked');
             this.calibratePosition();
         });
 
         // Reset button
         this.elements.resetButton?.addEventListener('click', () => {
+            console.log('🔄 Reset button clicked');
             this.resetSession();
         });
 
@@ -499,22 +577,68 @@ class ARSpeakerApp {
     }
 
     /**
+     * Show camera loading overlay when user requests camera access
+     */
+    showCameraLoading() {
+        // Create camera loading overlay
+        let cameraLoading = document.getElementById('camera-loading');
+        if (!cameraLoading) {
+            cameraLoading = document.createElement('div');
+            cameraLoading.id = 'camera-loading';
+            cameraLoading.className = 'loading-overlay';
+            cameraLoading.innerHTML = `
+                <div class="loading-spinner"></div>
+                <p>Requesting camera access...</p>
+                <p class="loading-hint">Please allow camera permissions when prompted</p>
+            `;
+            document.body.appendChild(cameraLoading);
+        }
+        cameraLoading.style.display = 'flex';
+    }
+    
+    /**
+     * Hide camera loading overlay
+     */
+    hideCameraLoading() {
+        const cameraLoading = document.getElementById('camera-loading');
+        if (cameraLoading) {
+            cameraLoading.style.display = 'none';
+        }
+    }
+    
+    /**
      * Start camera session with comprehensive error handling and user feedback
      */
     async startCameraSession() {
+        console.log('🚀 startCameraSession called');
+        console.log('📊 Initial state check:');
+        console.log('  - Elements available:', !!this.elements);
+        console.log('  - Start button:', this.elements?.startButton);
+        console.log('  - Camera supported:', this.isCameraSupported);
+        
         try {
-            this.updateStatus('Checking camera access...');
+            console.log('🔄 Showing camera loading...');
+            this.showCameraLoading();
+            
+            console.log('🔒 Disabling start button...');
             this.elements.startButton.disabled = true;
             
             // Check camera support when user actually wants to use it
+            console.log('📷 Calling checkCameraSupport...');
             await this.checkCameraSupport();
             
+            console.log('📊 After camera check - supported:', this.isCameraSupported);
+            
             if (!this.isCameraSupported) {
+                console.warn('❌ Camera not supported, re-enabling button and returning');
                 // Camera support check will show appropriate error message
                 this.elements.startButton.disabled = false;
+                this.hideCameraLoading();
                 return;
             }
 
+            console.log('✅ Camera supported, continuing with session start...');
+            this.hideCameraLoading();
             this.updateStatus('Starting camera session...');
             this.updateInstructionStep(2);
             
@@ -572,6 +696,7 @@ class ARSpeakerApp {
             
         } catch (error) {
             console.error('❌ Failed to start camera session:', error);
+            this.hideCameraLoading();
             this.handleCameraError(error);
             this.elements.startButton.disabled = false;
             this.updateInstructionStep(1);
