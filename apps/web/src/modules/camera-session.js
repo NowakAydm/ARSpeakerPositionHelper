@@ -40,7 +40,7 @@ export class CameraSession {
             throw new Error('Camera access not supported in this browser');
         }
 
-        // Setup Three.js scene
+        // Setup Three.js scene but don't modify container yet
         try {
             this.setupThreeJS();
         } catch (threeError) {
@@ -126,14 +126,9 @@ export class CameraSession {
             // Create reticle (targeting cursor)
             this.createReticle();
 
-            // Add to container
-            if (this.container) {
-                this.container.innerHTML = '';
-                this.container.appendChild(this.canvas);
-                this.container.appendChild(this.renderer.domElement);
-                // Add camera-active class for proper styling
-                this.container.classList.add('camera-active');
-            } else {
+            // Store elements for later use but don't add to container yet
+            // Container will be modified only when camera successfully starts
+            if (!this.container) {
                 throw new Error('Camera container element not found');
             }
 
@@ -223,10 +218,10 @@ export class CameraSession {
         log('▶️ Starting camera session...');
         
         try {
-            // Request camera access
+            // Request camera access with rear camera preference
             const constraints = {
                 video: {
-                    facingMode: 'environment', // Back camera
+                    facingMode: { ideal: 'environment' }, // Prefer rear camera, fallback to any camera
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 },
@@ -281,6 +276,9 @@ export class CameraSession {
                 readyState: this.video.readyState
             });
 
+            // Now that camera is working, set up the container with camera elements
+            this.setupCameraContainer();
+
             // Request device orientation permission on iOS
             await this.requestOrientationPermission();
 
@@ -305,6 +303,27 @@ export class CameraSession {
             } else {
                 throw new Error(`Camera session failed: ${cameraError.message}`);
             }
+        }
+    }
+
+    /**
+     * Setup camera container with canvas and renderer elements
+     * Only called when camera successfully starts
+     */
+    setupCameraContainer() {
+        const log = window.appDebugInfo || console.log;
+        
+        if (this.container && this.canvas && this.renderer) {
+            // Clear the placeholder content and add camera elements
+            this.container.innerHTML = '';
+            this.container.appendChild(this.canvas);
+            this.container.appendChild(this.renderer.domElement);
+            // Add camera-active class for proper styling
+            this.container.classList.add('camera-active');
+            
+            log('📱 Camera container setup complete');
+        } else {
+            console.error('❌ Missing elements for camera container setup');
         }
     }
 
