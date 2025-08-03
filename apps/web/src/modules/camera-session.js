@@ -20,6 +20,7 @@ export class CameraSession {
         this.canvas = null;
         this.backgroundTexture = null;
         this.frameCallback = null;
+        this.onPermissionGranted = null;
     }
 
     /**
@@ -231,6 +232,11 @@ export class CameraSession {
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
             this.showStatusMessage('📹 Camera access granted!');
 
+            // Call the permission granted callback immediately after permission is granted
+            if (this.onPermissionGranted) {
+                this.onPermissionGranted();
+            }
+
             // Create video element
             this.video = document.createElement('video');
             this.video.srcObject = this.stream;
@@ -238,6 +244,11 @@ export class CameraSession {
             this.video.playsInline = true;
             this.video.muted = true;
             this.video.style.display = 'none'; // Hide the video element since we draw to canvas
+
+            // IMMEDIATELY setup camera container and preview as soon as permission is granted
+            // This ensures the camera preview appears right away
+            this.setupCameraContainer();
+            this.setupCameraBackground();
 
             // Wait for video to load and be ready to play
             await new Promise((resolve, reject) => {
@@ -266,18 +277,12 @@ export class CameraSession {
                 this.video.addEventListener('error', handleError);
             });
 
-            // Setup camera background rendering
-            this.setupCameraBackground();
-
             // Add debug info
             log('📹 Video element created:', {
                 videoWidth: this.video.videoWidth,
                 videoHeight: this.video.videoHeight,
                 readyState: this.video.readyState
             });
-
-            // Now that camera is working, set up the container with camera elements
-            this.setupCameraContainer();
 
             // Request device orientation permission on iOS
             await this.requestOrientationPermission();
@@ -620,6 +625,13 @@ export class CameraSession {
                 debugPanel.remove();
             }
         }, 10000);
+    }
+
+    /**
+     * Set callback function to be called when camera permission is granted
+     */
+    setPermissionGrantedCallback(callback) {
+        this.onPermissionGranted = callback;
     }
 
     /**

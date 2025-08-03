@@ -149,6 +149,12 @@ class ARSpeakerApp {
             
             // Create camera session instance but don't start it yet
             this.cameraSession = new CameraSession();
+            
+            // Set up callback to be called immediately when camera permission is granted
+            this.cameraSession.setPermissionGrantedCallback(() => {
+                this.onCameraPermissionGranted();
+            });
+            
             this.debugSuccess('Camera session object created');
             this.debugInfo('Camera permissions will be requested when user starts session');
             
@@ -329,6 +335,28 @@ class ARSpeakerApp {
     }
 
     /**
+     * Called immediately when camera permission is granted (before full session setup)
+     */
+    onCameraPermissionGranted() {
+        this.debugSuccess('🎉 Camera permission granted! Enabling calibration and showing preview...');
+        
+        // Enable calibration button immediately
+        if (this.elements.calibrateButton) {
+            this.elements.calibrateButton.disabled = false;
+        }
+        
+        // Update status to show camera is active and ready
+        this.updateStatus('Camera Active - Preview loading, calibration unlocked');
+        this.updateInstructionStep(2);
+        
+        // Mark session as active for UI purposes
+        this.isSessionActive = true;
+        this.elements.startButton.textContent = 'Stop Camera Session';
+        
+        this.debugInfo('✅ Camera preview should now be visible and calibration enabled');
+    }
+
+    /**
      * Start camera session
      */
     async startCameraSession() {
@@ -350,23 +378,15 @@ class ARSpeakerApp {
             await this.cameraSession.start();
             this.debugSuccess('✅ Camera started successfully');
 
-            this.isSessionActive = true;
-            
-            // Update UI
-            this.elements.startButton.textContent = 'Stop Camera Session';
-            if (this.elements.calibrateButton) {
-                this.elements.calibrateButton.disabled = false;
-            }
-            
-            // Reset data
+            // Reset data for new session
             this.speakers = [];
             this.userPosition = null;
             
+            // Update final status
             this.updateStatus('Camera Active - Point camera at speakers');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Not Set');
             this.updateTriangleQuality('-');
-            this.updateInstructionStep(2);
             
             this.debugSuccess('✅ Camera session started successfully');
             
