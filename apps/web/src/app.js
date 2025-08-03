@@ -373,6 +373,15 @@ class ARSpeakerApp {
         } catch (error) {
             this.debugError(`Failed to start camera session: ${error.message}`);
             
+            // Ensure camera session is properly cleaned up on failure
+            if (this.cameraSession) {
+                try {
+                    this.cameraSession.stop();
+                } catch (stopError) {
+                    this.debugError(`Error during camera cleanup: ${stopError.message}`);
+                }
+            }
+            
             // Check if error is due to camera not being available
             if (error.message.includes('No camera found') || 
                 error.message.includes('Camera access was denied') ||
