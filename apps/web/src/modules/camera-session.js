@@ -245,10 +245,8 @@ export class CameraSession {
             this.video.muted = true;
             this.video.style.display = 'none'; // Hide the video element since we draw to canvas
 
-            // IMMEDIATELY setup camera container and preview as soon as permission is granted
-            // This ensures the camera preview appears right away
+            // Setup camera container immediately to show that camera is active
             this.setupCameraContainer();
-            this.setupCameraBackground();
 
             // Wait for video to load and be ready to play
             await new Promise((resolve, reject) => {
@@ -276,6 +274,10 @@ export class CameraSession {
                 this.video.addEventListener('canplay', handleSuccess);
                 this.video.addEventListener('error', handleError);
             });
+
+            // NOW setup camera background after video is confirmed ready
+            // This ensures the canvas can properly draw video frames
+            this.setupCameraBackground();
 
             // Add debug info
             log('📹 Video element created:', {
@@ -334,45 +336,50 @@ export class CameraSession {
 
     /**
      * Setup camera background rendering
+     * This should only be called after video is ready and has metadata
      */
     setupCameraBackground() {
+        const log = window.appDebugInfo || console.log;
         const ctx = this.canvas.getContext('2d');
         
-        // Wait for video metadata to load before setting canvas dimensions
-        const setupCanvas = () => {
+        // Since this is called after video is ready, we should have dimensions
+        if (this.video.videoWidth && this.video.videoHeight) {
+            this.canvas.width = this.video.videoWidth;
+            this.canvas.height = this.video.videoHeight;
+            
+            // Resize canvas to match container
+            this.canvas.style.width = '100%';
+            this.canvas.style.height = '100%';
+            this.canvas.style.objectFit = 'cover';
+            this.canvas.style.display = 'block';
+            
+            log(`📐 Canvas setup: ${this.canvas.width}x${this.canvas.height} (video: ${this.video.videoWidth}x${this.video.videoHeight})`);
+        } else {
+            // Fallback dimensions if video isn't ready somehow
+            this.canvas.width = 1280;
+            this.canvas.height = 720;
+            this.canvas.style.width = '100%';
+            this.canvas.style.height = '100%';
+            this.canvas.style.objectFit = 'cover';
+            this.canvas.style.display = 'block';
+            
+            console.warn('⚠️ Using fallback canvas dimensions - video not ready');
+        }
+        
+        // Listen for video resize events
+        this.video.addEventListener('resize', () => {
             if (this.video.videoWidth && this.video.videoHeight) {
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
-                
-                // Resize canvas to match container
-                this.canvas.style.width = '100%';
-                this.canvas.style.height = '100%';
-                this.canvas.style.objectFit = 'cover';
-                this.canvas.style.display = 'block';
-                
-                console.log(`📐 Canvas setup: ${this.canvas.width}x${this.canvas.height}`);
-            } else {
-                // Fallback dimensions
-                this.canvas.width = 1280;
-                this.canvas.height = 720;
-                this.canvas.style.width = '100%';
-                this.canvas.style.height = '100%';
-                this.canvas.style.objectFit = 'cover';
-                this.canvas.style.display = 'block';
-                
-                console.warn('⚠️ Using fallback canvas dimensions');
+                log(`📐 Canvas resized: ${this.canvas.width}x${this.canvas.height}`);
             }
-        };
+        });
 
-        // Setup canvas dimensions
-        setupCanvas();
-        
-        // Listen for video resize events
-        this.video.addEventListener('resize', setupCanvas);
-
+        // Create the frame drawing function
         const drawFrame = () => {
             if (this.video && this.video.readyState >= 2 && this.canvas.width > 0 && this.canvas.height > 0) {
                 try {
+                    // Draw the video frame to canvas
                     ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
                 } catch (error) {
                     console.warn('⚠️ Frame drawing error:', error);
@@ -381,6 +388,7 @@ export class CameraSession {
         };
 
         this.backgroundRenderLoop = drawFrame;
+        log('✅ Camera background setup complete');
     }
 
     /**
