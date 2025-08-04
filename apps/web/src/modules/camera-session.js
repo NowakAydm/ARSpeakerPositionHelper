@@ -131,6 +131,9 @@ export class CameraSession {
 
             // Create reticle (targeting cursor)
             this.createReticle();
+            
+            // Create gyroscope gizmo
+            this.createGyroscopeGizmo();
 
             // Store elements for later use but don't add to container yet
             // Container will be modified only when camera successfully starts
@@ -167,6 +170,8 @@ export class CameraSession {
                 this.enableOrientationControls();
             } else {
                 console.log('📱 Device orientation not available, using manual controls');
+                // Still enable orientation controls for fallback animation
+                this.enableOrientationControls();
             }
         } catch (error) {
             console.warn('⚠️ Device orientation setup failed:', error);
@@ -183,6 +188,31 @@ export class CameraSession {
             alpha = event.alpha || 0; // Z axis
             beta = event.beta || 0;   // X axis
             gamma = event.gamma || 0; // Y axis
+
+            // Store gyro data
+            if (this.gyroData) {
+                this.gyroData.alpha = alpha;
+                this.gyroData.beta = beta;
+                this.gyroData.gamma = gamma;
+            }
+
+            // Update gyroscope gizmo rotation
+            if (this.gyroGizmo) {
+                this.gyroGizmo.rotation.x = beta * Math.PI / 180;
+                this.gyroGizmo.rotation.y = alpha * Math.PI / 180;
+                this.gyroGizmo.rotation.z = gamma * Math.PI / 180;
+            }
+
+            // Update debug panel
+            if (this.gyroDebugDiv) {
+                this.gyroDebugDiv.innerHTML = `
+                    <div>🧭 GYROSCOPE GIZMO</div>
+                    <div>Status: Live Device Data</div>
+                    <div>Alpha (Z): ${alpha.toFixed(1)}°</div>
+                    <div>Beta (X): ${beta.toFixed(1)}°</div>
+                    <div>Gamma (Y): ${gamma.toFixed(1)}°</div>
+                `;
+            }
 
             // Apply rotation to camera (simplified)
             if (this.camera) {
@@ -211,6 +241,115 @@ export class CameraSession {
         this.reticle = new window.THREE.Mesh(geometry, material);
         this.reticle.position.set(0, 0, -2); // 2 meters in front
         this.scene.add(this.reticle);
+    }
+
+    /**
+     * Create gyroscope gizmo to visualize device orientation
+     */
+    createGyroscopeGizmo() {
+        // Create a coordinate system gizmo
+        this.gyroGizmo = new window.THREE.Group();
+        
+        // Create X, Y, Z axes with different colors
+        const axisLength = 0.5;
+        const axisWidth = 0.02;
+        
+        // X axis (red)
+        const xGeometry = new window.THREE.CylinderGeometry(axisWidth, axisWidth, axisLength, 8);
+        const xMaterial = new window.THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const xAxis = new window.THREE.Mesh(xGeometry, xMaterial);
+        xAxis.rotation.z = Math.PI / 2;
+        xAxis.position.x = axisLength / 2;
+        this.gyroGizmo.add(xAxis);
+        
+        // Y axis (green)
+        const yGeometry = new window.THREE.CylinderGeometry(axisWidth, axisWidth, axisLength, 8);
+        const yMaterial = new window.THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const yAxis = new window.THREE.Mesh(yGeometry, yMaterial);
+        yAxis.position.y = axisLength / 2;
+        this.gyroGizmo.add(yAxis);
+        
+        // Z axis (blue)
+        const zGeometry = new window.THREE.CylinderGeometry(axisWidth, axisWidth, axisLength, 8);
+        const zMaterial = new window.THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const zAxis = new window.THREE.Mesh(zGeometry, zMaterial);
+        zAxis.rotation.x = Math.PI / 2;
+        zAxis.position.z = axisLength / 2;
+        this.gyroGizmo.add(zAxis);
+        
+        // Add arrow heads for each axis
+        const arrowGeometry = new window.THREE.ConeGeometry(axisWidth * 2, axisWidth * 4, 8);
+        
+        // X arrow (red)
+        const xArrow = new window.THREE.Mesh(arrowGeometry, xMaterial);
+        xArrow.rotation.z = -Math.PI / 2;
+        xArrow.position.x = axisLength;
+        this.gyroGizmo.add(xArrow);
+        
+        // Y arrow (green)
+        const yArrow = new window.THREE.Mesh(arrowGeometry, yMaterial);
+        yArrow.position.y = axisLength;
+        this.gyroGizmo.add(yArrow);
+        
+        // Z arrow (blue)
+        const zArrow = new window.THREE.Mesh(arrowGeometry, zMaterial);
+        zArrow.rotation.x = Math.PI / 2;
+        zArrow.position.z = axisLength;
+        this.gyroGizmo.add(zArrow);
+        
+        // Add a center sphere
+        const centerGeometry = new window.THREE.SphereGeometry(axisWidth * 2, 16, 16);
+        const centerMaterial = new window.THREE.MeshBasicMaterial({ color: 0xffffff });
+        const centerSphere = new window.THREE.Mesh(centerGeometry, centerMaterial);
+        this.gyroGizmo.add(centerSphere);
+        
+        // Add text labels for debugging
+        this.createGyroDebugPanel();
+        
+        // Position the gizmo in the top-right corner of the view
+        this.gyroGizmo.position.set(1.5, 1, -3);
+        this.gyroGizmo.scale.set(0.5, 0.5, 0.5);
+        
+        // Add to scene
+        this.scene.add(this.gyroGizmo);
+        
+        // Store initial orientation values
+        this.gyroData = {
+            alpha: 0,
+            beta: 0,
+            gamma: 0
+        };
+        
+        console.log('🧭 Gyroscope gizmo created');
+    }
+
+    /**
+     * Create debug panel for gyroscope data
+     */
+    createGyroDebugPanel() {
+        // Create HTML overlay for gyro data
+        this.gyroDebugDiv = document.createElement('div');
+        this.gyroDebugDiv.style.position = 'absolute';
+        this.gyroDebugDiv.style.top = '10px';
+        this.gyroDebugDiv.style.right = '10px';
+        this.gyroDebugDiv.style.background = 'rgba(0, 0, 0, 0.8)';
+        this.gyroDebugDiv.style.color = '#00ff00';
+        this.gyroDebugDiv.style.padding = '10px';
+        this.gyroDebugDiv.style.fontFamily = 'monospace';
+        this.gyroDebugDiv.style.fontSize = '12px';
+        this.gyroDebugDiv.style.borderRadius = '5px';
+        this.gyroDebugDiv.style.zIndex = '1000';
+        this.gyroDebugDiv.style.pointerEvents = 'none';
+        this.gyroDebugDiv.innerHTML = `
+            <div>🧭 GYROSCOPE GIZMO</div>
+            <div>Status: Initializing...</div>
+            <div>Alpha (Z): 0°</div>
+            <div>Beta (X): 0°</div>
+            <div>Gamma (Y): 0°</div>
+        `;
+        
+        // Add to container when camera starts
+        this.shouldAddGyroDebug = true;
     }
 
     /**
@@ -431,6 +570,13 @@ export class CameraSession {
             
             // Add 3D renderer on top
             this.container.appendChild(this.renderer.domElement);
+            
+            // Add gyro debug panel if created
+            if (this.shouldAddGyroDebug && this.gyroDebugDiv) {
+                this.container.appendChild(this.gyroDebugDiv);
+                this.shouldAddGyroDebug = false;
+                log('🧭 Gyro debug panel added to container');
+            }
             
             // Add camera-active class for proper styling
             this.container.classList.add('camera-active');
@@ -722,7 +868,35 @@ export class CameraSession {
                 // Then render 3D scene on top
                 if (this.renderer && this.scene && this.camera) {
                     try {
+                        // Update gyroscope gizmo with fallback animation if no device orientation
+                        if (this.gyroGizmo && this.gyroData) {
+                            // If no real gyro data is coming in, provide a gentle animation
+                            if (this.gyroData.alpha === 0 && this.gyroData.beta === 0 && this.gyroData.gamma === 0) {
+                                const time = Date.now() * 0.001;
+                                this.gyroGizmo.rotation.y = Math.sin(time) * 0.3;
+                                this.gyroGizmo.rotation.x = Math.cos(time * 0.7) * 0.2;
+                                
+                                // Update debug panel for fallback mode
+                                if (this.gyroDebugDiv && renderFrameCount % 30 === 0) {
+                                    this.gyroDebugDiv.innerHTML = `
+                                        <div>🧭 GYROSCOPE GIZMO</div>
+                                        <div style="color: #ffaa00;">Status: Demo Mode</div>
+                                        <div>Alpha (Z): ${(Math.sin(time) * 30).toFixed(1)}°</div>
+                                        <div>Beta (X): ${(Math.cos(time * 0.7) * 20).toFixed(1)}°</div>
+                                        <div>Gamma (Y): 0.0°</div>
+                                        <div style="font-size: 10px; color: #888;">No device motion detected</div>
+                                    `;
+                                }
+                            }
+                        }
+                        
                         this.renderer.render(this.scene, this.camera);
+                        
+                        // Log Three.js scene info occasionally
+                        if (renderFrameCount % 300 === 0) {
+                            const log = window.appDebugInfo || console.log;
+                            log(`🎬 Three.js scene rendered (frame ${renderFrameCount}), objects: ${this.scene.children.length}`);
+                        }
                     } catch (threeError) {
                         console.warn('⚠️ Three.js render error:', threeError);
                     }
@@ -924,25 +1098,10 @@ export class CameraSession {
             error(`❌ Device enumeration failed: ${enumError.message}`);
         }
         
-        // Test basic camera access
-        try {
-            log('📹 Testing basic camera access...');
-            const testStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            const videoTrack = testStream.getVideoTracks()[0];
-            
-            if (videoTrack) {
-                const settings = videoTrack.getSettings();
-                log(`✅ Basic camera test successful: ${settings.width}x${settings.height}`);
-                
-                // Clean up test stream
-                testStream.getTracks().forEach(track => track.stop());
-                
-                return { supported: true, settings };
-            }
-        } catch (testError) {
-            error(`❌ Basic camera test failed: ${testError.name} - ${testError.message}`);
-            return { supported: false, reason: `Camera test failed: ${testError.message}` };
-        }
+        // Skip camera access test to avoid duplicate permission requests
+        // The actual camera test will happen when start() is called
+        log('📹 Skipping camera access test to avoid duplicate permission requests');
+        log('📹 Camera support will be tested when session starts');
         
         log('🔍 === CAMERA DIAGNOSTICS END ===');
         return { supported: true };

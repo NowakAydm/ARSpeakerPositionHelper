@@ -183,6 +183,13 @@ class ARSpeakerApp {
             clearMeasurementsButton: document.getElementById('clear-measurements'),
             undoLastPointButton: document.getElementById('undo-last-point'),
             toggleUnitsButton: document.getElementById('toggle-units'),
+            // New UI elements
+            toolsToggle: document.getElementById('tools-toggle'),
+            toolsContent: document.getElementById('tools-content'),
+            modeIndicator: document.getElementById('mode-indicator'),
+            modeText: document.getElementById('mode-text'),
+            pointCount: document.getElementById('point-count'),
+            totalDistance: document.getElementById('total-distance'),
             // Existing elements
             arContainer: document.getElementById('ar-container'),
             arStatus: document.getElementById('ar-status'),
@@ -193,8 +200,7 @@ class ARSpeakerApp {
             errorModal: document.getElementById('error-modal'),
             errorMessage: document.getElementById('error-message'),
             errorClose: document.getElementById('error-close'),
-            instructions: document.getElementById('instructions'),
-            helpButton: document.getElementById('help-toggle')
+            debugButton: document.getElementById('debug-toggle')
         };
 
         // Validate required elements
@@ -215,13 +221,19 @@ class ARSpeakerApp {
     setupEventListeners() {
         // Start/Stop button
         if (this.elements.startButton) {
-            this.elements.startButton.addEventListener('click', () => {
+            this.elements.startButton.addEventListener('click', async () => {
                 this.debugInfo('🔘 Start button clicked');
                 
                 if (this.isSessionActive) {
                     this.stopCameraSession();
                 } else {
-                    this.startCameraSession();
+                    // Try to start camera session first, fallback to manual mode
+                    try {
+                        await this.startCameraSession();
+                    } catch (error) {
+                        this.debugWarning('Camera session failed, starting manual mode');
+                        this.startManualMode();
+                    }
                 }
             });
         }
@@ -247,10 +259,20 @@ class ARSpeakerApp {
             });
         }
 
-        // Help toggle
-        if (this.elements.helpButton) {
-            this.elements.helpButton.addEventListener('click', () => {
-                this.toggleInstructions();
+        // Tools panel toggle
+        if (this.elements.toolsToggle) {
+            this.elements.toolsToggle.addEventListener('click', () => {
+                this.toggleToolsPanel();
+            });
+        }
+
+        // Debug button (moved from debug console functionality)
+        if (this.elements.debugButton) {
+            this.elements.debugButton.addEventListener('click', () => {
+                const debugConsole = document.getElementById('debug-console');
+                if (debugConsole) {
+                    debugConsole.classList.toggle('hidden');
+                }
             });
         }
 
@@ -300,14 +322,15 @@ class ARSpeakerApp {
     enableInitialButtons() {
         if (this.elements.startButton) {
             this.elements.startButton.disabled = false;
-            this.elements.startButton.textContent = 'Start Camera Session';
+            this.elements.startButton.textContent = 'Start Session';
         }
         
         if (this.elements.resetButton) {
             this.elements.resetButton.disabled = false;
         }
         
-        this.updateStatus('Ready - Click to start camera session');
+        this.updateStatus('Ready - Start session to position your 2 speakers');
+        this.updateModeIndicator();
         this.debugSuccess('✅ Initial buttons enabled');
     }
 
@@ -375,7 +398,7 @@ class ARSpeakerApp {
                 this.elements.calibrateButton.disabled = true;
             }
             
-            this.updateStatus('Ready - Manual speaker positioning mode');
+            this.updateStatus('Ready - Position your 2 speakers');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Not Set');
             this.updateTriangleQuality('-');
@@ -456,19 +479,6 @@ class ARSpeakerApp {
                 return;
             }
 
-            // Run comprehensive camera diagnostics first
-            this.debugInfo('🔍 Running camera diagnostics...');
-            this.addCameraFeedIndicator('loading', 'Checking camera...');
-            
-            const diagnostics = await this.cameraSession.debugCameraCapabilities();
-            
-            if (!diagnostics.supported) {
-                this.debugError(`Camera diagnostics failed: ${diagnostics.reason}`);
-                this.addCameraFeedIndicator('error', 'Camera unavailable');
-                this.offerAlternativeMode(diagnostics.reason);
-                return;
-            }
-
             this.addCameraFeedIndicator('loading', 'Initializing camera...');
 
             // Initialize camera session with container
@@ -483,11 +493,21 @@ class ARSpeakerApp {
 
             this.addCameraFeedIndicator('active', 'Camera feed active');
 
+            // Set session as active
+            this.isSessionActive = true;
+            
             // Reset data for new session
             this.speakers = [];
             this.userPosition = null;
             
-            // Update final status
+            // Update UI
+            this.elements.startButton.textContent = 'Stop Session';
+            if (this.elements.calibrateButton) {
+                this.elements.calibrateButton.disabled = false;
+            }
+            this.enableMeasurementControls();
+            this.updateModeIndicator();
+            
             this.updateStatus('Camera Active - Point camera at speakers');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Not Set');
@@ -522,17 +542,52 @@ class ARSpeakerApp {
             
             // Reset UI on failure
             this.isSessionActive = false;
-            this.elements.startButton.textContent = 'Start Camera Session';
+            this.elements.startButton.textContent = 'Start Session';
             if (this.elements.calibrateButton) {
                 this.elements.calibrateButton.disabled = true;
             }
             this.disableMeasurementControls();
+            this.updateModeIndicator();
         }
     }
 
     /**
-     * Stop camera session
+     * Start manual mode (fallback when camera is not available)
      */
+    startManualMode() {
+        this.debugInfo('🚀 Starting manual mode');
+        
+        try {
+            // Create manual mode scene
+            this.createManualModeScene();
+            
+            // Set session as active
+            this.isSessionActive = true;
+            
+            // Reset data for new session
+            this.speakers = [];
+            this.userPosition = null;
+            
+            // Update UI
+            this.elements.startButton.textContent = 'Stop Session';
+            if (this.elements.calibrateButton) {
+                this.elements.calibrateButton.disabled = false;
+            }
+            this.enableMeasurementControls();
+            this.updateModeIndicator();
+            
+            this.updateStatus('Manual Mode - Click to set positions');
+            this.updateSpeakerCount(0);
+            this.updatePositionStatus('Not Set');
+            this.updateTriangleQuality('-');
+            
+            this.debugSuccess('✅ Manual mode started successfully');
+            
+        } catch (error) {
+            this.debugError(`Failed to start manual mode: ${error.message}`);
+            this.showError(`Manual mode failed: ${error.message}`);
+        }
+    }
     async stopCameraSession() {
         this.debugInfo('🛑 Stopping camera session');
         
@@ -550,13 +605,14 @@ class ARSpeakerApp {
             this.userPosition = null;
             
             // Update UI
-            this.elements.startButton.textContent = 'Start Camera Session';
+            this.elements.startButton.textContent = 'Start Session';
             if (this.elements.calibrateButton) {
                 this.elements.calibrateButton.disabled = true;
             }
             this.disableMeasurementControls();
+            this.updateModeIndicator();
             
-            this.updateStatus('Ready - Click to start camera session');
+            this.updateStatus('Ready - Click to start session');
             this.updateSpeakerCount(0);
             this.updatePositionStatus('Not Set');
             this.updateTriangleQuality('-');
@@ -580,16 +636,18 @@ class ARSpeakerApp {
             // First click sets listener position
             this.userPosition = { x: 0, y: 0, z: 0 };
             this.updatePositionStatus('Set by click');
-            this.updateStatus('Manual Mode - Listener position set. Click to add speakers.');
+            this.updateStatus('Manual Mode - Listener position set. Click to place left speaker.');
             this.debugInfo('👤 User position set');
-        } else {
-            // Subsequent clicks add speakers
-            const speakerId = `speaker_${this.speakers.length + 1}`;
+        } else if (this.speakers.length < 2) {
+            // Add speakers up to maximum of 2
+            const speakerLabel = this.speakers.length === 0 ? 'left' : 'right';
+            const speakerId = `speaker_${speakerLabel}`;
             const newSpeaker = {
                 id: speakerId,
                 type: 'speaker',
+                label: speakerLabel,
                 position: {
-                    x: (Math.random() - 0.5) * 4,
+                    x: this.speakers.length === 0 ? -2 : 2, // Left speaker at -2, right at +2
                     y: 0,
                     z: -2 - Math.random() * 2
                 }
@@ -598,16 +656,18 @@ class ARSpeakerApp {
             this.speakers.push(newSpeaker);
             this.updateSpeakerCount(this.speakers.length);
             
-            if (this.speakers.length >= 2) {
+            if (this.speakers.length === 1) {
+                this.updateStatus('Manual Mode - Left speaker placed. Click to place right speaker.');
+            } else if (this.speakers.length === 2) {
                 this.calculateOptimalTriangle();
-                this.updateStatus(`Manual Mode - ${this.speakers.length} speakers placed. Triangle calculated.`);
-                this.updateInstructionStep(4);
-            } else {
-                this.updateStatus(`Manual Mode - ${this.speakers.length} speaker placed. Click to add more.`);
-                this.updateInstructionStep(3);
+                this.updateStatus('Manual Mode - Stereo setup complete! Triangle calculated.');
             }
             
-            this.debugInfo(`🔊 Added speaker ${this.speakers.length}`);
+            this.debugInfo(`🔊 Added ${speakerLabel} speaker (${this.speakers.length}/2)`);
+        } else {
+            // All speakers placed, inform user
+            this.updateStatus('Manual Mode - Both speakers placed. Use Reset to start over.');
+            this.debugInfo('🔊 All speakers already placed');
         }
     }
 
@@ -616,7 +676,7 @@ class ARSpeakerApp {
      */
     calibratePosition() {
         if (!this.isSessionActive) {
-            this.showError('Please start manual mode first');
+            this.showError('Please start a session first');
             return;
         }
 
@@ -624,8 +684,10 @@ class ARSpeakerApp {
         this.updatePositionStatus('Calibrated');
         this.updateStatus('Manual Mode - Position calibrated');
         
-        if (this.speakers.length >= 2) {
+        if (this.speakers.length === 2) {
             this.calculateOptimalTriangle();
+        } else {
+            this.updateStatus('Manual Mode - Position calibrated. Place both speakers to complete setup.');
         }
         
         this.debugInfo('🎯 Position calibrated');
@@ -635,11 +697,12 @@ class ARSpeakerApp {
      * Calculate optimal triangle
      */
     calculateOptimalTriangle() {
-        if (!this.triangleCalculator || this.speakers.length < 2 || !this.userPosition) {
+        if (!this.triangleCalculator || this.speakers.length !== 2 || !this.userPosition) {
+            this.debugWarning('⚠️ Cannot calculate triangle - need exactly 2 speakers and listener position');
             return;
         }
 
-        this.debugInfo('📐 Calculating optimal triangle');
+        this.debugInfo('📐 Calculating optimal stereo triangle');
         
         // Use triangle calculator
         this.triangleCalculator.setSpeakers(this.speakers);
@@ -648,7 +711,16 @@ class ARSpeakerApp {
         const quality = this.triangleCalculator.getTriangleQuality();
         this.updateTriangleQuality(`${quality}%`);
         
-        this.debugInfo(`📐 Triangle quality: ${quality}%`);
+        // Provide specific feedback for stereo setup
+        if (quality >= 80) {
+            this.updateStatus('Excellent stereo triangle! Perfect listening position.');
+        } else if (quality >= 60) {
+            this.updateStatus('Good stereo triangle. Consider minor adjustments.');
+        } else {
+            this.updateStatus('Stereo triangle needs improvement. Adjust speaker/listener positions.');
+        }
+        
+        this.debugInfo(`📐 Stereo triangle quality: ${quality}%`);
     }
 
     /**
@@ -667,7 +739,7 @@ class ARSpeakerApp {
         
         // Reset UI
         this.updateInstructionStep(1);
-        this.updateStatus('Ready - Manual speaker positioning mode');
+        this.updateStatus('Ready - Position your 2 speakers');
         this.updateSpeakerCount(0);
         this.updatePositionStatus('Not Set');
         this.updateTriangleQuality('-');
@@ -684,11 +756,52 @@ class ARSpeakerApp {
     }
 
     /**
-     * Toggle instructions
+     * Toggle tools panel
      */
-    toggleInstructions() {
-        if (this.elements.instructions) {
-            this.elements.instructions.classList.toggle('hidden');
+    toggleToolsPanel() {
+        if (this.elements.toolsToggle && this.elements.toolsContent) {
+            const isExpanded = this.elements.toolsContent.classList.contains('expanded');
+            
+            if (isExpanded) {
+                this.elements.toolsContent.classList.remove('expanded');
+                this.elements.toolsToggle.classList.remove('expanded');
+            } else {
+                this.elements.toolsContent.classList.add('expanded');
+                this.elements.toolsToggle.classList.add('expanded');
+            }
+        }
+    }
+
+    /**
+     * Update measurement statistics display
+     */
+    updateMeasurementStats(stats) {
+        if (this.elements.pointCount) {
+            this.elements.pointCount.textContent = stats.pointCount || 0;
+        }
+        if (this.elements.totalDistance) {
+            this.elements.totalDistance.textContent = stats.formattedTotalDistance || '0 m';
+        }
+    }
+
+    /**
+     * Update mode indicator
+     */
+    updateModeIndicator() {
+        if (this.elements.modeIndicator && this.elements.modeText) {
+            if (this.isSessionActive) {
+                this.elements.modeIndicator.classList.remove('hidden');
+                
+                if (this.currentMode === 'measuring') {
+                    this.elements.modeText.textContent = 'Measuring Mode';
+                    this.elements.modeIndicator.classList.add('measuring');
+                } else {
+                    this.elements.modeText.textContent = 'Positioning Mode';
+                    this.elements.modeIndicator.classList.remove('measuring');
+                }
+            } else {
+                this.elements.modeIndicator.classList.add('hidden');
+            }
         }
     }
 
@@ -767,7 +880,20 @@ class ARSpeakerApp {
 
     updateSpeakerCount(count) {
         if (this.elements.speakerCount) {
-            this.elements.speakerCount.textContent = count.toString();
+            this.elements.speakerCount.textContent = `${count}/2`;
+            
+            // Update status card styling based on progress
+            const speakerCard = document.getElementById('speakers-status-card');
+            if (speakerCard) {
+                speakerCard.classList.remove('incomplete', 'complete');
+                if (count === 0) {
+                    speakerCard.classList.add('incomplete');
+                } else if (count === 2) {
+                    speakerCard.classList.add('complete');
+                } else {
+                    speakerCard.classList.add('incomplete');
+                }
+            }
         }
     }
 
@@ -974,6 +1100,10 @@ class ARSpeakerApp {
             
             if (scene && camera && container) {
                 this.measurementTool.initialize(scene, camera, container);
+                // Set up stats update callback
+                this.measurementTool.onStatsUpdate = (stats) => {
+                    this.updateMeasurementStats(stats);
+                };
                 this.debugSuccess('✅ Measurement tool connected to scene');
             } else {
                 this.debugWarning('⚠️ No suitable scene found for measurement tool');
@@ -1038,13 +1168,16 @@ class ARSpeakerApp {
     updateMeasureModeButton() {
         if (this.elements.measureModeButton) {
             if (this.currentMode === 'measuring') {
-                this.elements.measureModeButton.textContent = 'Exit Measuring';
+                this.elements.measureModeButton.textContent = 'Exit';
                 this.elements.measureModeButton.classList.add('active');
             } else {
-                this.elements.measureModeButton.textContent = 'Start Measuring';
+                this.elements.measureModeButton.textContent = 'Measure';
                 this.elements.measureModeButton.classList.remove('active');
             }
         }
+        
+        // Update mode indicator
+        this.updateModeIndicator();
     }
 
     /**
@@ -1059,7 +1192,7 @@ class ARSpeakerApp {
         this.measurementTool.clearAll();
         this.debugSuccess('🧹 All measurements cleared');
         
-        // Update status
+        // Update stats
         const stats = this.measurementTool.getStatistics();
         this.updateMeasurementStats(stats);
     }
@@ -1144,6 +1277,7 @@ class ARSpeakerApp {
         
         window.testCameraFallback = async () => {
             this.debugInfo('🧪 Testing camera fallback constraints');
+            this.debugWarning('⚠️ WARNING: This will request camera permissions again!');
             if (this.cameraSession) {
                 try {
                     const stream = await this.cameraSession.requestCameraWithFallback();

@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AR Speaker Position Helper - Optimize your audio listening experience">
+    <meta name="description" content="AR Speak        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Optimize your audio experience with precision positioning</p>
+        </footer>ition Helper - Optimize your audio listening experience">
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#000000">
@@ -43,8 +48,8 @@
     <div id="app">
         <!-- Header -->
         <header class="app-header">
-            <h1>Camera Speaker Position Helper</h1>
-            <p class="subtitle">Find your optimal listening position using your camera</p>
+            <h1>AR Speaker Position Helper</h1>
+            <p class="subtitle">Find your optimal stereo triangle with precision positioning</p>
         </header>
 
         <!-- Main Content Area -->
@@ -55,100 +60,124 @@
                     <div class="placeholder-content">
                         <div class="placeholder-icon">📱</div>
                         <h2>Camera View</h2>
-                        <p>Click "Start Camera Session" to begin detecting speakers</p>
+                        <p>Start your session to begin</p>
                     </div>
+                </div>
+                
+                <!-- Floating Mode Indicator -->
+                <div id="mode-indicator" class="mode-indicator hidden">
+                    <span id="mode-text">Positioning Mode</span>
+                    <div class="mode-icon">📍</div>
                 </div>
             </div>
 
-            <!-- Controls Panel -->
-            <div class="controls-panel">
-                <button id="start-ar" class="primary-button">
-                    Start Camera Session
+            <!-- Quick Action Bar -->
+            <div class="quick-actions">
+                <button id="start-ar" class="action-button primary">
+                    <span class="button-icon">▶</span>
+                    <span class="button-text">Start Session</span>
                 </button>
-                <button id="calibrate" class="secondary-button" disabled>
-                    Calibrate Position
+                <button id="measure-mode" class="action-button secondary" disabled>
+                    <span class="button-icon">📏</span>
+                    <span class="button-text">Measure</span>
                 </button>
-                <button id="reset" class="secondary-button">
-                    Reset Session
+                <button id="calibrate" class="action-button secondary" disabled>
+                    <span class="button-icon">🎯</span>
+                    <span class="button-text">Calibrate</span>
+                </button>
+                <button id="reset" class="action-button tertiary">
+                    <span class="button-icon">↻</span>
+                    <span class="button-text">Reset</span>
                 </button>
             </div>
 
-            <!-- Measurement Controls Panel -->
-            <div class="measurement-controls-panel">
-                <h3>AR Measuring Tool</h3>
-                <div class="measurement-buttons">
-                    <button id="measure-mode" class="measurement-button" disabled>
-                        Start Measuring
-                    </button>
-                    <button id="clear-measurements" class="measurement-button" disabled>
-                        Clear All
-                    </button>
-                    <button id="undo-last-point" class="measurement-button" disabled>
-                        Undo Last Point
-                    </button>
-                    <button id="toggle-units" class="measurement-button" disabled>
-                        Switch to Imperial
-                    </button>
-                </div>
-            </div>
-
-            <!-- Instructions Panel -->
-            <div id="instructions" class="instructions-panel">
-                <div class="instruction-step active" data-step="1">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Start Camera Session</h3>
-                        <p>Click "Start Camera Session" to request camera access and begin</p>
+            <!-- Expandable Tools Panel -->
+            <div class="tools-panel">
+                <button class="tools-toggle" id="tools-toggle">
+                    <span class="toggle-icon">⚡</span>
+                    <span class="toggle-text">Tools</span>
+                    <span class="toggle-arrow">▼</span>
+                </button>
+                
+                <div class="tools-content" id="tools-content">
+                    <!-- Measurement Tools -->
+                    <div class="tool-section">
+                        <h4>Measurement Tools</h4>
+                        <div class="tool-grid">
+                            <button id="clear-measurements" class="tool-button" disabled>
+                                <span class="tool-icon">🧹</span>
+                                <span class="tool-label">Clear All</span>
+                            </button>
+                            <button id="undo-last-point" class="tool-button" disabled>
+                                <span class="tool-icon">↶</span>
+                                <span class="tool-label">Undo</span>
+                            </button>
+                            <button id="toggle-units" class="tool-button" disabled>
+                                <span class="tool-icon">📐</span>
+                                <span class="tool-label">Units</span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div class="instruction-step" data-step="2">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Position Speakers</h3>
-                        <p>Point camera at your speakers - the app will detect them automatically</p>
-                    </div>
-                </div>
-                <div class="instruction-step" data-step="3">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Set Your Position</h3>
-                        <p>Tap on the floor where you want to sit to set your listening position</p>
-                    </div>
-                </div>
-                <div class="instruction-step" data-step="4">
-                    <div class="step-number">4</div>
-                    <div class="step-content">
-                        <h3>Optimize Position</h3>
-                        <p>Follow the camera guidance to find the optimal listening triangle</p>
+                    
+                    <!-- Stats Display -->
+                    <div class="tool-section">
+                        <h4>Measurements</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Points</span>
+                                <span class="stat-value" id="point-count">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Total Distance</span>
+                                <span class="stat-value" id="total-distance">0 m</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Status Display -->
-            <div id="status" class="status-display">
-                <div class="status-item">
-                    <span class="status-label">Camera Status:</span>
-                    <span class="status-value" id="ar-status">Initializing...</span>
+            <!-- Status Cards -->
+            <div class="status-cards">
+                <div class="status-card" id="camera-status-card">
+                    <div class="status-header">
+                        <span class="status-icon">📹</span>
+                        <span class="status-title">Camera</span>
+                    </div>
+                    <div class="status-value" id="ar-status">Ready</div>
                 </div>
-                <div class="status-item">
-                    <span class="status-label">Speakers Detected:</span>
-                    <span class="status-value" id="speaker-count">0</span>
+                
+                <div class="status-card" id="speakers-status-card">
+                    <div class="status-header">
+                        <span class="status-icon">🔊</span>
+                        <span class="status-title">Speakers</span>
+                    </div>
+                    <div class="status-value" id="speaker-count">0/2</div>
                 </div>
-                <div class="status-item">
-                    <span class="status-label">Position:</span>
-                    <span class="status-value" id="position-status">Not Set</span>
+                
+                <div class="status-card" id="position-status-card">
+                    <div class="status-header">
+                        <span class="status-icon">👤</span>
+                        <span class="status-title">Position</span>
+                    </div>
+                    <div class="status-value" id="position-status">Not Set</div>
                 </div>
-                <div class="status-item">
-                    <span class="status-label">Triangle Quality:</span>
-                    <span class="status-value" id="triangle-quality">-</span>
+                
+                <div class="status-card" id="quality-status-card">
+                    <div class="status-header">
+                        <span class="status-icon">📊</span>
+                        <span class="status-title">Quality</span>
+                    </div>
+                    <div class="status-value" id="triangle-quality">-</div>
                 </div>
             </div>
 
-            <!-- Help Toggle -->
-            <button id="help-toggle" class="help-button" title="Toggle Instructions">?</button>
-            
-            <!-- Debug Console Toggle -->
-            <button id="debug-toggle" class="debug-console-toggle" title="Toggle Debug Console">🔍</button>
+            <!-- Help & Info -->
+            <div class="info-panel">
+                <button id="debug-toggle" class="info-button">
+                    <span class="info-icon">🔍</span>
+                    <span class="info-text">Debug</span>
+                </button>
+            </div>
         </main>
 
         <!-- Debug Console -->

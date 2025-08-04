@@ -21,6 +21,7 @@ export class MeasurementTool {
         this.lineMaterial = null;
         this.measurementLabels = [];
         this.units = 'metric'; // 'metric' or 'imperial'
+        this.onStatsUpdate = null; // Callback for stats updates
         
         // Visual settings
         this.pointSize = 0.05;
@@ -204,6 +205,9 @@ export class MeasurementTool {
         
         success(`✅ Point ${this.points.length} placed successfully`);
         log(`📏 Total points: ${this.points.length}`);
+        
+        // Trigger stats update callback
+        this.triggerStatsUpdate();
     }
 
     /**
@@ -406,6 +410,9 @@ export class MeasurementTool {
         }
         
         log(`🔙 Undid last point. Points remaining: ${this.points.length}`);
+        
+        // Trigger stats update callback
+        this.triggerStatsUpdate();
     }
 
     /**
@@ -443,6 +450,9 @@ export class MeasurementTool {
         this.measurementLabels = [];
         
         log('🧹 All measurements cleared');
+        
+        // Trigger stats update callback
+        this.triggerStatsUpdate();
     }
 
     /**
@@ -521,5 +531,15 @@ export class MeasurementTool {
             averageDistance: this.lines.length > 0 ? totalDistance / this.lines.length : 0,
             units: this.units
         };
+    }
+
+    /**
+     * Trigger stats update callback if set
+     */
+    triggerStatsUpdate() {
+        if (this.onStatsUpdate && typeof this.onStatsUpdate === 'function') {
+            const stats = this.getStatistics();
+            this.onStatsUpdate(stats);
+        }
     }
 }

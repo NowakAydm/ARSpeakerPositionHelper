@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Duplicate Camera Permissions Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; }
+        .failure { color: #dc3545; }
+        .info { color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        #permission-counter {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Duplicate Camera Permissions Fix</h1>
+    
+    <div class="test-section">
+        <h3>Camera Permission Request Counter</h3>
+        <div id="permission-counter">
+            Permission requests: <span id="request-count">0</span>
+        </div>
+        <p>This test monitors how many times getUserMedia is called to verify we've eliminated duplicate permission requests.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 1: Normal Camera Session Start</h3>
+        <button onclick="testNormalFlow()">Start Camera Session</button>
+        <button onclick="stopCamera()" id="stop-btn" disabled>Stop Camera</button>
+        <div id="test1-result"></div>
+        <div id="camera-container" style="width: 100%; height: 200px; border: 2px solid #ddd; margin: 10px 0; background: #000;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: Camera Diagnostics Only</h3>
+        <button onclick="testDiagnosticsOnly()">Run Camera Diagnostics</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Results Summary</h3>
+        <div id="results-summary"></div>
+    </div>
+
+    <script type="module">
+        import { CameraSession } from './src/modules/camera-session.js';
+
+        let cameraSession = null;
+        let permissionRequestCount = 0;
+        let originalGetUserMedia = null;
+
+        // Hook into getUserMedia to count permission requests
+        function setupPermissionCounter() {
+            if (!originalGetUserMedia) {
+                originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+                navigator.mediaDevices.getUserMedia = async function(constraints) {
+                    permissionRequestCount++;
+                    document.getElementById('request-count').textContent = permissionRequestCount;
+                    console.log(`🔍 getUserMedia called (count: ${permissionRequestCount})`, constraints);
+                    return originalGetUserMedia.call(this, constraints);
+                };
+            }
+        }
+
+        function resetPermissionCounter() {
+            permissionRequestCount = 0;
+            document.getElementById('request-count').textContent = permissionRequestCount;
+        }
+
+        window.testNormalFlow = async function() {
+            const resultDiv = document.getElementById('test1-result');
+            const container = document.getElementById('camera-container');
+            const stopBtn = document.getElementById('stop-btn');
+            
+            try {
+                resultDiv.innerHTML = '<div class="info">Testing normal camera session flow...</div>';
+                
+                // Reset counter for this test
+                resetPermissionCounter();
+                setupPermissionCounter();
+
+                // Create and initialize camera session
+                cameraSession = new CameraSession();
+                await cameraSession.initialize(container);
+                
+                resultDiv.innerHTML += '<div class="info">Camera session initialized, starting camera...</div>';
+                
+                // Start camera session
+                await cameraSession.start();
+                
+                stopBtn.disabled = false;
+                
+                const finalCount = permissionRequestCount;
+                if (finalCount === 1) {
+                    resultDiv.innerHTML += '<div class="success">✅ SUCCESS: Only 1 permission request made</div>';
+                    resultDiv.innerHTML += '<div class="info">Perfect! No duplicate permission requests detected.</div>';
+                } else if (finalCount === 0) {
+                    resultDiv.innerHTML += '<div class="info">ℹ️ No permission requests (likely using mock or already granted)</div>';
+                } else {
+                    resultDiv.innerHTML += `<div class="failure">❌ ISSUE: ${finalCount} permission requests made</div>`;
+                    resultDiv.innerHTML += '<div class="failure">There are still duplicate permission requests!</div>';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="failure">❌ Test failed: ${error.message}</div>`;
+                console.error('Test failed:', error);
+            }
+        };
+
+        window.testDiagnosticsOnly = async function() {
+            const resultDiv = document.getElementById('test2-result');
+            
+            try {
+                resultDiv.innerHTML = '<div class="info">Testing camera diagnostics only...</div>';
+                
+                // Reset counter for this test
+                resetPermissionCounter();
+                setupPermissionCounter();
+
+                // Create camera session and run diagnostics only
+                const testSession = new CameraSession();
+                const diagnostics = await testSession.debugCameraCapabilities();
+                
+                const finalCount = permissionRequestCount;
+                if (finalCount === 0) {
+                    resultDiv.innerHTML += '<div class="success">✅ SUCCESS: No permission requests during diagnostics</div>';
+                    resultDiv.innerHTML += '<div class="info">Diagnostics completed without requesting camera access.</div>';
+                } else {
+                    resultDiv.innerHTML += `<div class="failure">❌ ISSUE: ${finalCount} permission requests during diagnostics</div>`;
+                    resultDiv.innerHTML += '<div class="failure">Diagnostics should not request camera permissions!</div>';
+                }
+                
+                resultDiv.innerHTML += `<div class="info">Diagnostics result: ${JSON.stringify(diagnostics)}</div>`;
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="failure">❌ Test failed: ${error.message}</div>`;
+                console.error('Diagnostics test failed:', error);
+            }
+        };
+
+        window.stopCamera = function() {
+            const stopBtn = document.getElementById('stop-btn');
+            
+            if (cameraSession) {
+                cameraSession.stop();
+                cameraSession = null;
+            }
+            
+            stopBtn.disabled = true;
+            
+            document.getElementById('test1-result').innerHTML += '<div class="info">Camera session stopped</div>';
+        };
+
+        // Initialize permission counter on page load
+        setupPermissionCounter();
+        
+        // Add a summary update function
+        function updateSummary() {
+            const summaryDiv = document.getElementById('results-summary');
+            summaryDiv.innerHTML = `
+                <p><strong>Expected behavior after fix:</strong></p>
+                <ul>
+                    <li>✅ Test 1 should show exactly 1 permission request</li>
+                    <li>✅ Test 2 should show 0 permission requests</li>
+                    <li>❌ Any higher numbers indicate remaining duplicate requests</li>
+                </ul>
+                <p><strong>Total permission requests since page load:</strong> <span style="font-weight: bold; color: ${permissionRequestCount > 1 ? '#dc3545' : '#28a745'}">${permissionRequestCount}</span></p>
+            `;
+        }
+
+        // Update summary every few seconds
+        setInterval(updateSummary, 2000);
+        updateSummary();
+    </script>
+</body>
+</html>
