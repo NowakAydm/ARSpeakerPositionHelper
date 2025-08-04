@@ -326,6 +326,12 @@ class ARSpeakerApp {
                 this.elements.calibrateButton.disabled = false;
             }
             
+            // Create a simple Three.js scene for manual mode to support measurements
+            this.createManualModeScene();
+            
+            // Enable measurement controls now that we have a scene
+            this.enableMeasurementControls();
+            
             // Reset data
             this.speakers = [];
             this.userPosition = null;
@@ -356,6 +362,12 @@ class ARSpeakerApp {
             // Reset data
             this.speakers = [];
             this.userPosition = null;
+            
+            // Disable measurement controls
+            this.disableMeasurementControls();
+            
+            // Clean up manual mode scene
+            this.cleanupManualModeScene();
             
             // Update UI
             this.elements.startButton.textContent = 'Start Manual Mode';
@@ -793,6 +805,138 @@ class ARSpeakerApp {
     }
 
     /**
+     * Create a simple Three.js scene for manual mode to support measurements
+     */
+    createManualModeScene() {
+        if (!window.THREE) {
+            this.debugWarning('THREE.js not available for manual mode scene');
+            return;
+        }
+
+        try {
+            // Create a minimal Three.js scene for measurements
+            this.manualModeScene = new window.THREE.Scene();
+            
+            // Create camera
+            this.manualModeCamera = new window.THREE.PerspectiveCamera(
+                70,
+                this.elements.arContainer.clientWidth / this.elements.arContainer.clientHeight,
+                0.01,
+                1000
+            );
+            this.manualModeCamera.position.set(0, 1.6, 0);
+            
+            // Create renderer
+            this.manualModeRenderer = new window.THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                preserveDrawingBuffer: true
+            });
+            
+            this.manualModeRenderer.setPixelRatio(window.devicePixelRatio);
+            this.manualModeRenderer.setSize(
+                this.elements.arContainer.clientWidth,
+                this.elements.arContainer.clientHeight
+            );
+            this.manualModeRenderer.setClearColor(0x000000, 0); // Transparent background
+            
+            // Style the renderer canvas
+            this.manualModeRenderer.domElement.style.position = 'absolute';
+            this.manualModeRenderer.domElement.style.top = '0';
+            this.manualModeRenderer.domElement.style.left = '0';
+            this.manualModeRenderer.domElement.style.width = '100%';
+            this.manualModeRenderer.domElement.style.height = '100%';
+            this.manualModeRenderer.domElement.style.zIndex = '2';
+            this.manualModeRenderer.domElement.style.pointerEvents = 'auto';
+            
+            // Add basic lighting
+            const ambientLight = new window.THREE.AmbientLight(0xffffff, 0.6);
+            this.manualModeScene.add(ambientLight);
+            
+            const directionalLight = new window.THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            this.manualModeScene.add(directionalLight);
+            
+            // Add canvas to container
+            this.elements.arContainer.appendChild(this.manualModeRenderer.domElement);
+            this.elements.arContainer.classList.add('camera-active');
+            
+            // Start render loop
+            this.startManualModeRenderLoop();
+            
+            // Create a mock camera session object for measurement tool compatibility
+            this.mockCameraSession = {
+                scene: this.manualModeScene,
+                camera: this.manualModeCamera,
+                renderer: this.manualModeRenderer
+            };
+            
+            this.debugSuccess('✅ Manual mode Three.js scene created');
+            
+        } catch (error) {
+            this.debugError(`Failed to create manual mode scene: ${error.message}`);
+        }
+    }
+
+    /**
+     * Start render loop for manual mode scene
+     */
+    startManualModeRenderLoop() {
+        if (!this.manualModeRenderer || !this.manualModeScene || !this.manualModeCamera) return;
+        
+        const animate = () => {
+            if (this.isSessionActive && this.manualModeRenderer) {
+                requestAnimationFrame(animate);
+                this.manualModeRenderer.render(this.manualModeScene, this.manualModeCamera);
+            }
+        };
+        animate();
+    }
+
+    /**
+     * Clean up manual mode Three.js scene
+     */
+    cleanupManualModeScene() {
+        try {
+            // Remove renderer canvas from container
+            if (this.manualModeRenderer && this.manualModeRenderer.domElement) {
+                this.elements.arContainer.removeChild(this.manualModeRenderer.domElement);
+            }
+            
+            // Clean up Three.js objects
+            if (this.manualModeRenderer) {
+                this.manualModeRenderer.dispose();
+                this.manualModeRenderer = null;
+            }
+            
+            if (this.manualModeScene) {
+                // Dispose of all scene objects
+                this.manualModeScene.traverse((object) => {
+                    if (object.geometry) object.geometry.dispose();
+                    if (object.material) {
+                        if (Array.isArray(object.material)) {
+                            object.material.forEach(material => material.dispose());
+                        } else {
+                            object.material.dispose();
+                        }
+                    }
+                });
+                this.manualModeScene = null;
+            }
+            
+            this.manualModeCamera = null;
+            this.mockCameraSession = null;
+            
+            // Remove camera-active class
+            this.elements.arContainer.classList.remove('camera-active');
+            
+            this.debugSuccess('✅ Manual mode scene cleaned up');
+            
+        } catch (error) {
+            this.debugError(`Error cleaning up manual mode scene: ${error.message}`);
+        }
+    }
+    /**
      * Enable measurement controls when camera session is active
      */
     enableMeasurementControls() {
@@ -809,15 +953,30 @@ class ARSpeakerApp {
             }
         });
         
-        // Initialize measurement tool with camera session's Three.js components
-        if (this.measurementTool && this.cameraSession) {
-            const scene = this.cameraSession.scene;
-            const camera = this.cameraSession.camera;
-            const container = this.elements.arContainer;
+        // Initialize measurement tool with either camera session or manual mode scene
+        if (this.measurementTool) {
+            let scene, camera, container;
+            
+            // Try camera session first
+            if (this.cameraSession && this.cameraSession.scene && this.cameraSession.camera) {
+                scene = this.cameraSession.scene;
+                camera = this.cameraSession.camera;
+                container = this.elements.arContainer;
+                this.debugInfo('📏 Using camera session for measurements');
+            }
+            // Fallback to manual mode scene
+            else if (this.mockCameraSession) {
+                scene = this.mockCameraSession.scene;
+                camera = this.mockCameraSession.camera;
+                container = this.elements.arContainer;
+                this.debugInfo('📏 Using manual mode scene for measurements');
+            }
             
             if (scene && camera && container) {
                 this.measurementTool.initialize(scene, camera, container);
-                this.debugSuccess('✅ Measurement tool connected to camera session');
+                this.debugSuccess('✅ Measurement tool connected to scene');
+            } else {
+                this.debugWarning('⚠️ No suitable scene found for measurement tool');
             }
         }
     }
