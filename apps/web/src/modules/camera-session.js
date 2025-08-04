@@ -14,13 +14,16 @@ export class CameraSession {
         this.scene = null;
         this.camera = null;
         this.isActive = false;
+        this.renderLoopActive = false;
         this.container = null;
         this.controls = null;
         this.reticle = null;
         this.canvas = null;
         this.backgroundTexture = null;
+        this.backgroundRenderLoop = null;
         this.frameCallback = null;
         this.onPermissionGranted = null;
+        this.videoResizeHandler = null;
     }
 
     /**
@@ -106,6 +109,8 @@ export class CameraSession {
             this.canvas.style.zIndex = '1';
             this.canvas.style.pointerEvents = 'none';
             this.canvas.style.objectFit = 'cover';
+            this.canvas.style.display = 'block';
+            this.canvas.style.backgroundColor = 'transparent';
             
             // 3D renderer goes on top
             this.renderer.domElement.style.position = 'absolute';
@@ -360,11 +365,22 @@ export class CameraSession {
             // This ensures the canvas can properly draw video frames
             this.setupCameraBackground();
 
+            // Ensure video is playing for canvas drawing
+            try {
+                await this.video.play();
+                log('📹 Video playback started');
+            } catch (playError) {
+                console.warn('⚠️ Video play failed:', playError);
+                // Video might already be playing or autoplay might be blocked
+                // This is not critical as the video may start playing later
+            }
+
             // Add debug info
             log('📹 Video element created:', {
                 videoWidth: this.video.videoWidth,
                 videoHeight: this.video.videoHeight,
-                readyState: this.video.readyState
+                readyState: this.video.readyState,
+                playing: !this.video.paused
             });
 
             // Request device orientation permission on iOS
@@ -404,8 +420,18 @@ export class CameraSession {
         if (this.container && this.canvas && this.renderer) {
             // Clear the placeholder content and add camera elements
             this.container.innerHTML = '';
+            
+            // Add video element (hidden) - needed for canvas drawing
+            if (this.video) {
+                this.container.appendChild(this.video);
+            }
+            
+            // Add canvas for camera background
             this.container.appendChild(this.canvas);
+            
+            // Add 3D renderer on top
             this.container.appendChild(this.renderer.domElement);
+            
             // Add camera-active class for proper styling
             this.container.classList.add('camera-active');
             
@@ -423,52 +449,216 @@ export class CameraSession {
         const log = window.appDebugInfo || console.log;
         const ctx = this.canvas.getContext('2d');
         
-        // Since this is called after video is ready, we should have dimensions
-        if (this.video.videoWidth && this.video.videoHeight) {
-            this.canvas.width = this.video.videoWidth;
-            this.canvas.height = this.video.videoHeight;
-            
-            // Resize canvas to match container
-            this.canvas.style.width = '100%';
-            this.canvas.style.height = '100%';
-            this.canvas.style.objectFit = 'cover';
-            this.canvas.style.display = 'block';
-            
-            log(`📐 Canvas setup: ${this.canvas.width}x${this.canvas.height} (video: ${this.video.videoWidth}x${this.video.videoHeight})`);
-        } else {
-            // Fallback dimensions if video isn't ready somehow
-            this.canvas.width = 1280;
-            this.canvas.height = 720;
-            this.canvas.style.width = '100%';
-            this.canvas.style.height = '100%';
-            this.canvas.style.objectFit = 'cover';
-            this.canvas.style.display = 'block';
-            
-            console.warn('⚠️ Using fallback canvas dimensions - video not ready');
+        if (!ctx) {
+            console.error('❌ Failed to get 2D canvas context');
+            return;
         }
         
-        // Listen for video resize events
-        this.video.addEventListener('resize', () => {
-            if (this.video.videoWidth && this.video.videoHeight) {
+        // Ensure canvas has proper dimensions matching video
+        const setCanvasDimensions = () => {
+            if (this.video && this.video.videoWidth && this.video.videoHeight) {
+                // Set intrinsic canvas dimensions to match video
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
+                
+                log(`📐 Canvas dimensions set: ${this.canvas.width}x${this.canvas.height} (video: ${this.video.videoWidth}x${this.video.videoHeight})`);
+                return true;
+            } else {
+                // Use reasonable fallback dimensions
+                this.canvas.width = 1280;
+                this.canvas.height = 720;
+                console.warn('⚠️ Using fallback canvas dimensions - video not ready');
+                return false;
+            }
+        };
+        
+        // Set initial dimensions
+        setCanvasDimensions();
+        
+        // Ensure proper CSS styling for visibility
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = '100%';
+        this.canvas.style.objectFit = 'cover';
+        this.canvas.style.display = 'block';
+        this.canvas.style.backgroundColor = 'black'; // Fallback background
+        
+        // Listen for video resize events and metadata changes
+        const handleVideoResize = () => {
+            if (setCanvasDimensions()) {
                 log(`📐 Canvas resized: ${this.canvas.width}x${this.canvas.height}`);
             }
-        });
+        };
+        
+        this.video.addEventListener('resize', handleVideoResize);
+        this.video.addEventListener('loadedmetadata', handleVideoResize);
+        
+        // Store event handler for cleanup
+        this.videoResizeHandler = handleVideoResize;
 
-        // Create the frame drawing function
+        // Frame counter for debugging
+        let frameCount = 0;
+
+        // Create robust frame drawing function with better error handling
         const drawFrame = () => {
-            if (this.video && this.video.readyState >= 2 && this.canvas.width > 0 && this.canvas.height > 0) {
+            frameCount++;
+            if (!this.video || !this.canvas || !ctx) {
+                console.warn('🎨 Draw frame: Missing components', {
+                    hasVideo: !!this.video,
+                    hasCanvas: !!this.canvas,
+                    hasCtx: !!ctx
+                });
+                return;
+            }
+            
+            // Check if video is ready for drawing
+            if (this.video.readyState < 2) {
+                console.warn('🎨 Draw frame: Video not ready', {
+                    readyState: this.video.readyState
+                });
+                return; // Video not ready yet
+            }
+            
+            // Check if video has valid dimensions
+            if (this.video.videoWidth === 0 || this.video.videoHeight === 0) {
+                console.warn('🎨 Draw frame: Invalid video dimensions', {
+                    width: this.video.videoWidth,
+                    height: this.video.videoHeight
+                });
+                return; // Video dimensions not available
+            }
+            
+            try {
+                // Ensure canvas has proper dimensions before drawing
+                if (this.canvas.width <= 0 || this.canvas.height <= 0) {
+                    setCanvasDimensions();
+                }
+                
+                // Only draw if we have valid dimensions
+                if (this.canvas.width > 0 && this.canvas.height > 0) {
+                    // Save context state
+                    ctx.save();
+                    
+                    // Clear canvas with a black background
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // Debug: Draw a test pattern first to verify canvas is working
+                    if (frameCount % 600 === 0) { // Every 10 seconds at 60fps
+                        console.log('🎨 Drawing test pattern to verify canvas...');
+                        ctx.fillStyle = '#FF0000';
+                        ctx.fillRect(10, 10, 100, 100);
+                        ctx.fillStyle = '#00FF00';
+                        ctx.fillRect(120, 10, 100, 100);
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.font = '16px Arial';
+                        ctx.fillText(`Frame ${frameCount}`, 10, 140);
+                    }
+                    
+                    // Try to draw the video frame
+                    try {
+                        ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                        
+                        // Debug log success occasionally
+                        if (frameCount % 600 === 0) {
+                            console.log('🎨 Video frame drawn successfully');
+                        }
+                    } catch (videoDrawError) {
+                        console.warn('🎨 Video draw failed, drawing fallback pattern:', videoDrawError);
+                        // Draw a fallback pattern to show the canvas is working
+                        ctx.fillStyle = '#FF0000';
+                        ctx.fillRect(10, 10, 100, 100);
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.font = '16px Arial';
+                        ctx.fillText('Video Draw Error', 10, 140);
+                        ctx.fillText(videoDrawError.message, 10, 160);
+                    }
+                    
+                    // Restore context state
+                    ctx.restore();
+                }
+            } catch (error) {
+                console.warn('⚠️ Frame drawing error:', error);
+                // Draw a fallback pattern to show the canvas is working
                 try {
-                    // Draw the video frame to canvas
-                    ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
-                } catch (error) {
-                    console.warn('⚠️ Frame drawing error:', error);
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(10, 10, 100, 100);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '16px Arial';
+                    ctx.fillText('Canvas Error', 10, 140);
+                } catch (fallbackError) {
+                    console.error('❌ Even fallback drawing failed:', fallbackError);
                 }
             }
         };
 
         this.backgroundRenderLoop = drawFrame;
+        
+        // Test draw immediately to verify canvas is working
+        log('🎨 Testing initial canvas draw...');
+        try {
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(0, 0, 50, 50);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '12px Arial';
+            ctx.fillText('Canvas Ready', 60, 30);
+            log('✅ Canvas test draw successful');
+        } catch (testError) {
+            console.error('❌ Canvas test draw failed:', testError);
+        }
+        
+        // Immediately call the draw function once to verify it works
+        log('🎨 Testing initial video draw...');
+        try {
+            drawFrame();
+            log('✅ Initial video draw test successful');
+        } catch (drawError) {
+            console.error('❌ Initial video draw test failed:', drawError);
+        }
+        
+        // Start a simple direct animation loop for background rendering
+        log('🎬 Starting direct background render loop...');
+        const startBackgroundLoop = () => {
+            let backgroundFrameCount = 0;
+            let isRunning = true;
+            
+            const backgroundAnimate = () => {
+                if (isRunning && this.video && this.canvas) {
+                    backgroundFrameCount++;
+                    
+                    // Call the draw function
+                    try {
+                        drawFrame();
+                        
+                        // Log every 300 frames (every 5 seconds at 60fps)
+                        if (backgroundFrameCount % 300 === 0) {
+                            log(`🎨 Direct background frame ${backgroundFrameCount} rendered`);
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Direct background render error:', error);
+                    }
+                    
+                    // Continue the loop
+                    requestAnimationFrame(backgroundAnimate);
+                } else if (!isRunning) {
+                    log('🛑 Direct background render loop stopped');
+                } else if (!this.video || !this.canvas) {
+                    console.warn('⚠️ Direct background render: missing video or canvas');
+                }
+            };
+            
+            // Store the stop function for cleanup
+            this.stopBackgroundLoop = () => {
+                isRunning = false;
+            };
+            
+            // Start the background loop
+            backgroundAnimate();
+            log('✅ Direct background render loop started');
+        };
+        
+        // Start the background loop immediately
+        startBackgroundLoop();
+        
         log('✅ Camera background setup complete');
     }
 
@@ -496,25 +686,64 @@ export class CameraSession {
      * Start render loop
      */
     startRenderLoop() {
+        if (this.renderLoopActive) {
+            console.warn('⚠️ Render loop already active');
+            return;
+        }
+        
+        this.renderLoopActive = true;
+        let renderFrameCount = 0;
+        
         const animate = () => {
-            if (this.isActive) {
+            if (this.isActive && this.renderLoopActive) {
                 requestAnimationFrame(animate);
+                renderFrameCount++;
                 
-                // Render camera background
+                // Render camera background first (if available)
                 if (this.backgroundRenderLoop) {
-                    this.backgroundRenderLoop();
+                    try {
+                        this.backgroundRenderLoop();
+                        
+                        // Log every 60 frames to verify background rendering is working
+                        if (renderFrameCount % 60 === 0) {
+                            const log = window.appDebugInfo || console.log;
+                            log(`🎨 Background rendered frame ${renderFrameCount}`);
+                        }
+                    } catch (renderError) {
+                        console.warn('⚠️ Background render error:', renderError);
+                    }
+                } else {
+                    // Log if backgroundRenderLoop is missing
+                    if (renderFrameCount % 60 === 0) {
+                        console.warn('⚠️ No backgroundRenderLoop function available at frame', renderFrameCount);
+                    }
                 }
                 
-                // Render 3D scene
-                this.renderer.render(this.scene, this.camera);
+                // Then render 3D scene on top
+                if (this.renderer && this.scene && this.camera) {
+                    try {
+                        this.renderer.render(this.scene, this.camera);
+                    } catch (threeError) {
+                        console.warn('⚠️ Three.js render error:', threeError);
+                    }
+                }
                 
                 // Call frame callback if set
                 if (this.frameCallback) {
-                    this.frameCallback();
+                    try {
+                        this.frameCallback();
+                    } catch (callbackError) {
+                        console.warn('⚠️ Frame callback error:', callbackError);
+                    }
                 }
             }
         };
+        
+        // Start the animation loop
         animate();
+        
+        const log = window.appDebugInfo || console.log;
+        log('🎬 Render loop started');
     }
 
     /**
@@ -526,6 +755,8 @@ export class CameraSession {
         
         log('⏹️ Stopping camera session...');
         
+        // Stop render loop
+        this.renderLoopActive = false;
         this.isActive = false;
 
         // Stop camera stream
@@ -534,10 +765,26 @@ export class CameraSession {
             this.stream = null;
         }
 
-        // Clean up video element
+        // Clean up video element and event listeners
         if (this.video) {
+            // Remove video event listeners
+            if (this.videoResizeHandler) {
+                this.video.removeEventListener('resize', this.videoResizeHandler);
+                this.video.removeEventListener('loadedmetadata', this.videoResizeHandler);
+                this.videoResizeHandler = null;
+            }
+            
             this.video.srcObject = null;
             this.video = null;
+        }
+        
+        // Clear background render loop
+        this.backgroundRenderLoop = null;
+        
+        // Stop direct background loop if it exists
+        if (this.stopBackgroundLoop) {
+            this.stopBackgroundLoop();
+            this.stopBackgroundLoop = null;
         }
 
         // Remove orientation listener
