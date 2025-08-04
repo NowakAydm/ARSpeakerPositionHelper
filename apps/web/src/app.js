@@ -5,15 +5,18 @@
 
 import { TriangleCalculator } from './modules/triangle.js';
 import { CameraSession } from './modules/camera-session.js';
+import { MeasurementTool } from './modules/measurement.js';
 
 class ARSpeakerApp {
     constructor() {
         this.triangleCalculator = null;
         this.cameraSession = null;
+        this.measurementTool = null;
         this.speakers = [];
         this.userPosition = null;
         this.currentStep = 1;
         this.isSessionActive = false;
+        this.currentMode = 'positioning'; // 'positioning' or 'measuring'
         
         // Set up global debug logger
         window.appDebugLog = this.debugLog.bind(this);
@@ -85,6 +88,10 @@ class ARSpeakerApp {
             // Initialize triangle calculator
             this.triangleCalculator = new TriangleCalculator();
             this.debugSuccess('Triangle calculator initialized');
+            
+            // Initialize measurement tool
+            this.measurementTool = new MeasurementTool();
+            this.debugSuccess('Measurement tool initialized');
             
             // Initialize camera session (for future use)
             await this.initializeCameraSession();
@@ -171,6 +178,12 @@ class ARSpeakerApp {
             startButton: document.getElementById('start-ar'),
             calibrateButton: document.getElementById('calibrate'),
             resetButton: document.getElementById('reset'),
+            // Measurement controls
+            measureModeButton: document.getElementById('measure-mode'),
+            clearMeasurementsButton: document.getElementById('clear-measurements'),
+            undoLastPointButton: document.getElementById('undo-last-point'),
+            toggleUnitsButton: document.getElementById('toggle-units'),
+            // Existing elements
             arContainer: document.getElementById('ar-container'),
             arStatus: document.getElementById('ar-status'),
             speakerCount: document.getElementById('speaker-count'),
@@ -241,11 +254,41 @@ class ARSpeakerApp {
             });
         }
 
-        // Container clicks to add speakers/position
+        // Measurement controls
+        if (this.elements.measureModeButton) {
+            this.elements.measureModeButton.addEventListener('click', () => {
+                this.toggleMeasurementMode();
+            });
+        }
+
+        if (this.elements.clearMeasurementsButton) {
+            this.elements.clearMeasurementsButton.addEventListener('click', () => {
+                this.clearAllMeasurements();
+            });
+        }
+
+        if (this.elements.undoLastPointButton) {
+            this.elements.undoLastPointButton.addEventListener('click', () => {
+                this.undoLastMeasurementPoint();
+            });
+        }
+
+        if (this.elements.toggleUnitsButton) {
+            this.elements.toggleUnitsButton.addEventListener('click', () => {
+                this.toggleMeasurementUnits();
+            });
+        }
+
+        // Container clicks to add speakers/position or measurement points
         if (this.elements.arContainer) {
             this.elements.arContainer.addEventListener('click', (event) => {
                 if (this.isSessionActive) {
-                    this.handleContainerClick(event);
+                    if (this.currentMode === 'measuring') {
+                        // Measurement tool will handle its own clicks when active
+                        return;
+                    } else {
+                        this.handleContainerClick(event);
+                    }
                 }
             });
         }
@@ -283,6 +326,12 @@ class ARSpeakerApp {
                 this.elements.calibrateButton.disabled = false;
             }
             
+            // Create a simple Three.js scene for manual mode to support measurements
+            this.createManualModeScene();
+            
+            // Enable measurement controls now that we have a scene
+            this.enableMeasurementControls();
+            
             // Reset data
             this.speakers = [];
             this.userPosition = null;
@@ -313,6 +362,12 @@ class ARSpeakerApp {
             // Reset data
             this.speakers = [];
             this.userPosition = null;
+            
+            // Disable measurement controls
+            this.disableMeasurementControls();
+            
+            // Clean up manual mode scene
+            this.cleanupManualModeScene();
             
             // Update UI
             this.elements.startButton.textContent = 'Start Manual Mode';
@@ -372,6 +427,9 @@ class ARSpeakerApp {
         if (this.elements.calibrateButton) {
             this.elements.calibrateButton.disabled = false;
         }
+        
+        // Enable measurement controls if they exist
+        this.enableMeasurementControls();
         
         // Update status to show camera is active and ready
         this.updateStatus('Camera Active - Preview loading, calibration unlocked');
@@ -468,6 +526,7 @@ class ARSpeakerApp {
             if (this.elements.calibrateButton) {
                 this.elements.calibrateButton.disabled = true;
             }
+            this.disableMeasurementControls();
         }
     }
 
@@ -495,6 +554,7 @@ class ARSpeakerApp {
             if (this.elements.calibrateButton) {
                 this.elements.calibrateButton.disabled = true;
             }
+            this.disableMeasurementControls();
             
             this.updateStatus('Ready - Click to start camera session');
             this.updateSpeakerCount(0);
@@ -745,8 +805,314 @@ class ARSpeakerApp {
     }
 
     /**
-     * Expose debug functions
+     * Create a simple Three.js scene for manual mode to support measurements
      */
+    createManualModeScene() {
+        if (!window.THREE) {
+            this.debugWarning('THREE.js not available for manual mode scene');
+            return;
+        }
+
+        try {
+            // Create a minimal Three.js scene for measurements
+            this.manualModeScene = new window.THREE.Scene();
+            
+            // Create camera
+            this.manualModeCamera = new window.THREE.PerspectiveCamera(
+                70,
+                this.elements.arContainer.clientWidth / this.elements.arContainer.clientHeight,
+                0.01,
+                1000
+            );
+            this.manualModeCamera.position.set(0, 1.6, 0);
+            
+            // Create renderer
+            this.manualModeRenderer = new window.THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                preserveDrawingBuffer: true
+            });
+            
+            this.manualModeRenderer.setPixelRatio(window.devicePixelRatio);
+            this.manualModeRenderer.setSize(
+                this.elements.arContainer.clientWidth,
+                this.elements.arContainer.clientHeight
+            );
+            this.manualModeRenderer.setClearColor(0x000000, 0); // Transparent background
+            
+            // Style the renderer canvas
+            this.manualModeRenderer.domElement.style.position = 'absolute';
+            this.manualModeRenderer.domElement.style.top = '0';
+            this.manualModeRenderer.domElement.style.left = '0';
+            this.manualModeRenderer.domElement.style.width = '100%';
+            this.manualModeRenderer.domElement.style.height = '100%';
+            this.manualModeRenderer.domElement.style.zIndex = '2';
+            this.manualModeRenderer.domElement.style.pointerEvents = 'auto';
+            
+            // Add basic lighting
+            const ambientLight = new window.THREE.AmbientLight(0xffffff, 0.6);
+            this.manualModeScene.add(ambientLight);
+            
+            const directionalLight = new window.THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            this.manualModeScene.add(directionalLight);
+            
+            // Add canvas to container
+            this.elements.arContainer.appendChild(this.manualModeRenderer.domElement);
+            this.elements.arContainer.classList.add('camera-active');
+            
+            // Start render loop
+            this.startManualModeRenderLoop();
+            
+            // Create a mock camera session object for measurement tool compatibility
+            this.mockCameraSession = {
+                scene: this.manualModeScene,
+                camera: this.manualModeCamera,
+                renderer: this.manualModeRenderer
+            };
+            
+            this.debugSuccess('✅ Manual mode Three.js scene created');
+            
+        } catch (error) {
+            this.debugError(`Failed to create manual mode scene: ${error.message}`);
+        }
+    }
+
+    /**
+     * Start render loop for manual mode scene
+     */
+    startManualModeRenderLoop() {
+        if (!this.manualModeRenderer || !this.manualModeScene || !this.manualModeCamera) return;
+        
+        const animate = () => {
+            if (this.isSessionActive && this.manualModeRenderer) {
+                requestAnimationFrame(animate);
+                this.manualModeRenderer.render(this.manualModeScene, this.manualModeCamera);
+            }
+        };
+        animate();
+    }
+
+    /**
+     * Clean up manual mode Three.js scene
+     */
+    cleanupManualModeScene() {
+        try {
+            // Remove renderer canvas from container
+            if (this.manualModeRenderer && this.manualModeRenderer.domElement) {
+                this.elements.arContainer.removeChild(this.manualModeRenderer.domElement);
+            }
+            
+            // Clean up Three.js objects
+            if (this.manualModeRenderer) {
+                this.manualModeRenderer.dispose();
+                this.manualModeRenderer = null;
+            }
+            
+            if (this.manualModeScene) {
+                // Dispose of all scene objects
+                this.manualModeScene.traverse((object) => {
+                    if (object.geometry) object.geometry.dispose();
+                    if (object.material) {
+                        if (Array.isArray(object.material)) {
+                            object.material.forEach(material => material.dispose());
+                        } else {
+                            object.material.dispose();
+                        }
+                    }
+                });
+                this.manualModeScene = null;
+            }
+            
+            this.manualModeCamera = null;
+            this.mockCameraSession = null;
+            
+            // Remove camera-active class
+            this.elements.arContainer.classList.remove('camera-active');
+            
+            this.debugSuccess('✅ Manual mode scene cleaned up');
+            
+        } catch (error) {
+            this.debugError(`Error cleaning up manual mode scene: ${error.message}`);
+        }
+    }
+    /**
+     * Enable measurement controls when camera session is active
+     */
+    enableMeasurementControls() {
+        const buttons = [
+            'measureModeButton',
+            'clearMeasurementsButton', 
+            'undoLastPointButton',
+            'toggleUnitsButton'
+        ];
+        
+        buttons.forEach(buttonKey => {
+            if (this.elements[buttonKey]) {
+                this.elements[buttonKey].disabled = false;
+            }
+        });
+        
+        // Initialize measurement tool with either camera session or manual mode scene
+        if (this.measurementTool) {
+            let scene, camera, container;
+            
+            // Try camera session first
+            if (this.cameraSession && this.cameraSession.scene && this.cameraSession.camera) {
+                scene = this.cameraSession.scene;
+                camera = this.cameraSession.camera;
+                container = this.elements.arContainer;
+                this.debugInfo('📏 Using camera session for measurements');
+            }
+            // Fallback to manual mode scene
+            else if (this.mockCameraSession) {
+                scene = this.mockCameraSession.scene;
+                camera = this.mockCameraSession.camera;
+                container = this.elements.arContainer;
+                this.debugInfo('📏 Using manual mode scene for measurements');
+            }
+            
+            if (scene && camera && container) {
+                this.measurementTool.initialize(scene, camera, container);
+                this.debugSuccess('✅ Measurement tool connected to scene');
+            } else {
+                this.debugWarning('⚠️ No suitable scene found for measurement tool');
+            }
+        }
+    }
+
+    /**
+     * Disable measurement controls when camera session is inactive
+     */
+    disableMeasurementControls() {
+        const buttons = [
+            'measureModeButton',
+            'clearMeasurementsButton',
+            'undoLastPointButton', 
+            'toggleUnitsButton'
+        ];
+        
+        buttons.forEach(buttonKey => {
+            if (this.elements[buttonKey]) {
+                this.elements[buttonKey].disabled = true;
+            }
+        });
+
+        // Deactivate measurement tool
+        if (this.measurementTool) {
+            this.measurementTool.deactivate();
+        }
+
+        // Reset to positioning mode
+        this.currentMode = 'positioning';
+        this.updateMeasureModeButton();
+    }
+
+    /**
+     * Toggle between positioning and measuring modes
+     */
+    toggleMeasurementMode() {
+        if (!this.isSessionActive) {
+            this.showError('Please start a camera session first');
+            return;
+        }
+
+        if (this.currentMode === 'positioning') {
+            this.currentMode = 'measuring';
+            this.measurementTool.activate();
+            this.updateStatus('Measuring Mode - Tap to place measurement points');
+            this.debugInfo('📏 Switched to measuring mode');
+        } else {
+            this.currentMode = 'positioning';
+            this.measurementTool.deactivate();
+            this.updateStatus('Positioning Mode - Tap to set speaker/listener positions');
+            this.debugInfo('📍 Switched to positioning mode');
+        }
+
+        this.updateMeasureModeButton();
+    }
+
+    /**
+     * Update measure mode button text based on current mode
+     */
+    updateMeasureModeButton() {
+        if (this.elements.measureModeButton) {
+            if (this.currentMode === 'measuring') {
+                this.elements.measureModeButton.textContent = 'Exit Measuring';
+                this.elements.measureModeButton.classList.add('active');
+            } else {
+                this.elements.measureModeButton.textContent = 'Start Measuring';
+                this.elements.measureModeButton.classList.remove('active');
+            }
+        }
+    }
+
+    /**
+     * Clear all measurement points and lines
+     */
+    clearAllMeasurements() {
+        if (!this.measurementTool) {
+            this.showError('Measurement tool not available');
+            return;
+        }
+
+        this.measurementTool.clearAll();
+        this.debugSuccess('🧹 All measurements cleared');
+        
+        // Update status
+        const stats = this.measurementTool.getStatistics();
+        this.updateMeasurementStats(stats);
+    }
+
+    /**
+     * Undo the last measurement point
+     */
+    undoLastMeasurementPoint() {
+        if (!this.measurementTool) {
+            this.showError('Measurement tool not available');
+            return;
+        }
+
+        this.measurementTool.undoLastPoint();
+        this.debugSuccess('🔙 Last measurement point removed');
+        
+        // Update stats
+        const stats = this.measurementTool.getStatistics();
+        this.updateMeasurementStats(stats);
+    }
+
+    /**
+     * Toggle between metric and imperial units
+     */
+    toggleMeasurementUnits() {
+        if (!this.measurementTool) {
+            this.showError('Measurement tool not available');
+            return;
+        }
+
+        this.measurementTool.toggleUnits();
+        
+        // Update button text
+        if (this.elements.toggleUnitsButton) {
+            const units = this.measurementTool.units;
+            this.elements.toggleUnitsButton.textContent = units === 'metric' ? 'Switch to Imperial' : 'Switch to Metric';
+        }
+        
+        this.debugSuccess(`📏 Units switched to ${this.measurementTool.units}`);
+    }
+
+    /**
+     * Update measurement statistics display
+     */
+    updateMeasurementStats(stats) {
+        // For now, log to debug console - we can add UI elements later
+        this.debugInfo(`📊 Measurement Stats: ${stats.pointCount} points, ${stats.lineCount} lines, Total: ${stats.formattedTotalDistance}`);
+        
+        // Update the existing status display to show measurement info when in measuring mode
+        if (this.currentMode === 'measuring') {
+            this.updateStatus(`Measuring Mode - ${stats.pointCount} points, Total: ${stats.formattedTotalDistance}`);
+        }
+    }
     exposeDebugFunctions() {
         window.debugApp = () => {
             this.debugInfo('🔍 App Debug Info:');

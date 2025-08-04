@@ -661,3 +661,127 @@ html, body {
 .mb-2 {
     margin-bottom: 1rem;
 }
+
+/* Measurement Controls Panel */
+.measurement-controls-panel {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    padding: 1rem;
+    border-top: 1px solid #444;
+    border-bottom: 1px solid #444;
+}
+
+.measurement-controls-panel h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #00ff00;
+    text-align: center;
+    font-weight: 600;
+}
+
+.measurement-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.5rem;
+}
+
+.measurement-button {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.measurement-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.measurement-button:disabled {
+    background: #444;
+    color: #888;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.measurement-button.active {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #000;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+.measurement-button.active:hover {
+    background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%);
+}
+
+/* Measurement mode indicator */
+#measure-mode.active::before {
+    content: "📏 ";
+    margin-right: 0.25rem;
+}
+
+/* Visual feedback for measurement points and lines */
+.measurement-point {
+    border-radius: 50%;
+    background: radial-gradient(circle, #00ff00 0%, #00cc00 70%, #009900 100%);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    animation: pulse 2s ease-in-out infinite alternate;
+}
+
+.measurement-line {
+    stroke: #ffff00;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 0, 0.5));
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+.measurement-label {
+    background: rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(5px);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
+}
+
+@keyframes glow {
+    0% { filter: drop-shadow(0 0 3px rgba(255, 255, 0, 0.5)); }
+    100% { filter: drop-shadow(0 0 6px rgba(255, 255, 0, 0.8)); }
+}
+
+/* Mobile responsiveness for measurement controls */
+@media (max-width: 480px) {
+    .measurement-buttons {
+        grid-template-columns: 1fr;
+    }
+    
+    .measurement-button {
+        font-size: 0.8rem;
+        padding: 0.6rem 0.8rem;
+        min-height: 40px;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .measurement-buttons {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
