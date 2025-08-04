@@ -5,15 +5,18 @@
 
 import { TriangleCalculator } from './modules/triangle.js';
 import { CameraSession } from './modules/camera-session.js';
+import { MeasurementTool } from './modules/measurement.js';
 
 class ARSpeakerApp {
     constructor() {
         this.triangleCalculator = null;
         this.cameraSession = null;
+        this.measurementTool = null;
         this.speakers = [];
         this.userPosition = null;
         this.currentStep = 1;
         this.isSessionActive = false;
+        this.currentMode = 'positioning'; // 'positioning' or 'measuring'
         
         // Set up global debug logger
         window.appDebugLog = this.debugLog.bind(this);
@@ -85,6 +88,10 @@ class ARSpeakerApp {
             // Initialize triangle calculator
             this.triangleCalculator = new TriangleCalculator();
             this.debugSuccess('Triangle calculator initialized');
+            
+            // Initialize measurement tool
+            this.measurementTool = new MeasurementTool();
+            this.debugSuccess('Measurement tool initialized');
             
             // Initialize camera session (for future use)
             await this.initializeCameraSession();
@@ -171,6 +178,12 @@ class ARSpeakerApp {
             startButton: document.getElementById('start-ar'),
             calibrateButton: document.getElementById('calibrate'),
             resetButton: document.getElementById('reset'),
+            // Measurement controls
+            measureModeButton: document.getElementById('measure-mode'),
+            clearMeasurementsButton: document.getElementById('clear-measurements'),
+            undoLastPointButton: document.getElementById('undo-last-point'),
+            toggleUnitsButton: document.getElementById('toggle-units'),
+            // Existing elements
             arContainer: document.getElementById('ar-container'),
             arStatus: document.getElementById('ar-status'),
             speakerCount: document.getElementById('speaker-count'),
@@ -241,11 +254,41 @@ class ARSpeakerApp {
             });
         }
 
-        // Container clicks to add speakers/position
+        // Measurement controls
+        if (this.elements.measureModeButton) {
+            this.elements.measureModeButton.addEventListener('click', () => {
+                this.toggleMeasurementMode();
+            });
+        }
+
+        if (this.elements.clearMeasurementsButton) {
+            this.elements.clearMeasurementsButton.addEventListener('click', () => {
+                this.clearAllMeasurements();
+            });
+        }
+
+        if (this.elements.undoLastPointButton) {
+            this.elements.undoLastPointButton.addEventListener('click', () => {
+                this.undoLastMeasurementPoint();
+            });
+        }
+
+        if (this.elements.toggleUnitsButton) {
+            this.elements.toggleUnitsButton.addEventListener('click', () => {
+                this.toggleMeasurementUnits();
+            });
+        }
+
+        // Container clicks to add speakers/position or measurement points
         if (this.elements.arContainer) {
             this.elements.arContainer.addEventListener('click', (event) => {
                 if (this.isSessionActive) {
-                    this.handleContainerClick(event);
+                    if (this.currentMode === 'measuring') {
+                        // Measurement tool will handle its own clicks when active
+                        return;
+                    } else {
+                        this.handleContainerClick(event);
+                    }
                 }
             });
         }
@@ -373,6 +416,9 @@ class ARSpeakerApp {
             this.elements.calibrateButton.disabled = false;
         }
         
+        // Enable measurement controls if they exist
+        this.enableMeasurementControls();
+        
         // Update status to show camera is active and ready
         this.updateStatus('Camera Active - Preview loading, calibration unlocked');
         this.updateInstructionStep(2);
@@ -468,6 +514,7 @@ class ARSpeakerApp {
             if (this.elements.calibrateButton) {
                 this.elements.calibrateButton.disabled = true;
             }
+            this.disableMeasurementControls();
         }
     }
 
@@ -495,6 +542,7 @@ class ARSpeakerApp {
             if (this.elements.calibrateButton) {
                 this.elements.calibrateButton.disabled = true;
             }
+            this.disableMeasurementControls();
             
             this.updateStatus('Ready - Click to start camera session');
             this.updateSpeakerCount(0);
@@ -745,8 +793,167 @@ class ARSpeakerApp {
     }
 
     /**
-     * Expose debug functions
+     * Enable measurement controls when camera session is active
      */
+    enableMeasurementControls() {
+        const buttons = [
+            'measureModeButton',
+            'clearMeasurementsButton', 
+            'undoLastPointButton',
+            'toggleUnitsButton'
+        ];
+        
+        buttons.forEach(buttonKey => {
+            if (this.elements[buttonKey]) {
+                this.elements[buttonKey].disabled = false;
+            }
+        });
+        
+        // Initialize measurement tool with camera session's Three.js components
+        if (this.measurementTool && this.cameraSession) {
+            const scene = this.cameraSession.scene;
+            const camera = this.cameraSession.camera;
+            const container = this.elements.arContainer;
+            
+            if (scene && camera && container) {
+                this.measurementTool.initialize(scene, camera, container);
+                this.debugSuccess('✅ Measurement tool connected to camera session');
+            }
+        }
+    }
+
+    /**
+     * Disable measurement controls when camera session is inactive
+     */
+    disableMeasurementControls() {
+        const buttons = [
+            'measureModeButton',
+            'clearMeasurementsButton',
+            'undoLastPointButton', 
+            'toggleUnitsButton'
+        ];
+        
+        buttons.forEach(buttonKey => {
+            if (this.elements[buttonKey]) {
+                this.elements[buttonKey].disabled = true;
+            }
+        });
+
+        // Deactivate measurement tool
+        if (this.measurementTool) {
+            this.measurementTool.deactivate();
+        }
+
+        // Reset to positioning mode
+        this.currentMode = 'positioning';
+        this.updateMeasureModeButton();
+    }
+
+    /**
+     * Toggle between positioning and measuring modes
+     */
+    toggleMeasurementMode() {
+        if (!this.isSessionActive) {
+            this.showError('Please start a camera session first');
+            return;
+        }
+
+        if (this.currentMode === 'positioning') {
+            this.currentMode = 'measuring';
+            this.measurementTool.activate();
+            this.updateStatus('Measuring Mode - Tap to place measurement points');
+            this.debugInfo('📏 Switched to measuring mode');
+        } else {
+            this.currentMode = 'positioning';
+            this.measurementTool.deactivate();
+            this.updateStatus('Positioning Mode - Tap to set speaker/listener positions');
+            this.debugInfo('📍 Switched to positioning mode');
+        }
+
+        this.updateMeasureModeButton();
+    }
+
+    /**
+     * Update measure mode button text based on current mode
+     */
+    updateMeasureModeButton() {
+        if (this.elements.measureModeButton) {
+            if (this.currentMode === 'measuring') {
+                this.elements.measureModeButton.textContent = 'Exit Measuring';
+                this.elements.measureModeButton.classList.add('active');
+            } else {
+                this.elements.measureModeButton.textContent = 'Start Measuring';
+                this.elements.measureModeButton.classList.remove('active');
+            }
+        }
+    }
+
+    /**
+     * Clear all measurement points and lines
+     */
+    clearAllMeasurements() {
+        if (!this.measurementTool) {
+            this.showError('Measurement tool not available');
+            return;
+        }
+
+        this.measurementTool.clearAll();
+        this.debugSuccess('🧹 All measurements cleared');
+        
+        // Update status
+        const stats = this.measurementTool.getStatistics();
+        this.updateMeasurementStats(stats);
+    }
+
+    /**
+     * Undo the last measurement point
+     */
+    undoLastMeasurementPoint() {
+        if (!this.measurementTool) {
+            this.showError('Measurement tool not available');
+            return;
+        }
+
+        this.measurementTool.undoLastPoint();
+        this.debugSuccess('🔙 Last measurement point removed');
+        
+        // Update stats
+        const stats = this.measurementTool.getStatistics();
+        this.updateMeasurementStats(stats);
+    }
+
+    /**
+     * Toggle between metric and imperial units
+     */
+    toggleMeasurementUnits() {
+        if (!this.measurementTool) {
+            this.showError('Measurement tool not available');
+            return;
+        }
+
+        this.measurementTool.toggleUnits();
+        
+        // Update button text
+        if (this.elements.toggleUnitsButton) {
+            const units = this.measurementTool.units;
+            this.elements.toggleUnitsButton.textContent = units === 'metric' ? 'Switch to Imperial' : 'Switch to Metric';
+        }
+        
+        this.debugSuccess(`📏 Units switched to ${this.measurementTool.units}`);
+    }
+
+    /**
+     * Update measurement statistics display
+     */
+    updateMeasurementStats(stats) {
+        // For now, log to debug console - we can add UI elements later
+        this.debugInfo(`📊 Measurement Stats: ${stats.pointCount} points, ${stats.lineCount} lines, Total: ${stats.formattedTotalDistance}`);
+        
+        // Update the existing status display to show measurement info when in measuring mode
+        if (this.currentMode === 'measuring') {
+            this.updateStatus(`Measuring Mode - ${stats.pointCount} points, Total: ${stats.formattedTotalDistance}`);
+        }
+    }
     exposeDebugFunctions() {
         window.debugApp = () => {
             this.debugInfo('🔍 App Debug Info:');
