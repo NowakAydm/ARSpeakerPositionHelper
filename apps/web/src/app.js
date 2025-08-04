@@ -335,6 +335,34 @@ class ARSpeakerApp {
     }
 
     /**
+     * Offer alternative modes when camera fails
+     */
+    offerAlternativeMode(reason) {
+        this.debugInfo('📱 Camera not available, offering alternatives...');
+        
+        // Create a more informative dialog
+        const message = `Camera is not available: ${reason}\n\nAvailable options:\n1. Manual Mode - Click to place speakers and set position\n2. Retry Camera - Try camera access again\n3. Help - View troubleshooting tips\n\nWould you like to continue in manual mode?`;
+        
+        if (confirm(message)) {
+            this.startManualSession();
+            return;
+        }
+        
+        // User declined manual mode, offer help
+        this.showCameraHelp(reason);
+    }
+
+    /**
+     * Show camera troubleshooting help
+     */
+    showCameraHelp(reason) {
+        const helpMessage = `Camera Access Help\n\nIssue: ${reason}\n\nTroubleshooting steps:\n• Ensure you're using HTTPS (camera requires secure connection)\n• Check browser permissions for camera access\n• Try a different browser (Chrome, Firefox, Safari)\n• Make sure no other apps are using the camera\n• Restart your browser\n• Check if your device has a camera\n\nSupported browsers:\n• Chrome 90+\n• Firefox 85+\n• Safari 14+\n• Edge 90+`;
+        
+        alert(helpMessage);
+        this.debugInfo('📚 Camera help shown to user');
+    }
+
+    /**
      * Called immediately when camera permission is granted (before full session setup)
      */
     onCameraPermissionGranted() {
@@ -370,13 +398,32 @@ class ARSpeakerApp {
                 return;
             }
 
+            // Run comprehensive camera diagnostics first
+            this.debugInfo('🔍 Running camera diagnostics...');
+            this.addCameraFeedIndicator('loading', 'Checking camera...');
+            
+            const diagnostics = await this.cameraSession.debugCameraCapabilities();
+            
+            if (!diagnostics.supported) {
+                this.debugError(`Camera diagnostics failed: ${diagnostics.reason}`);
+                this.addCameraFeedIndicator('error', 'Camera unavailable');
+                this.offerAlternativeMode(diagnostics.reason);
+                return;
+            }
+
+            this.addCameraFeedIndicator('loading', 'Initializing camera...');
+
             // Initialize camera session with container
             await this.cameraSession.initialize(this.elements.arContainer);
             this.debugSuccess('✅ Camera session initialized');
 
+            this.addCameraFeedIndicator('loading', 'Starting camera feed...');
+
             // Start the camera
             await this.cameraSession.start();
             this.debugSuccess('✅ Camera started successfully');
+
+            this.addCameraFeedIndicator('active', 'Camera feed active');
 
             // Reset data for new session
             this.speakers = [];
@@ -392,6 +439,7 @@ class ARSpeakerApp {
             
         } catch (error) {
             this.debugError(`Failed to start camera session: ${error.message}`);
+            this.addCameraFeedIndicator('error', 'Camera failed');
             
             // Ensure camera session is properly cleaned up on failure
             if (this.cameraSession) {
@@ -408,12 +456,8 @@ class ARSpeakerApp {
                 error.message.includes('Camera access not supported')) {
                 
                 this.debugInfo('📱 Camera not available, offering manual mode...');
-                
-                // Offer manual mode as fallback
-                if (confirm(`Camera is not available: ${error.message}\n\nWould you like to continue in manual mode? You can click to place speakers and set your listening position.`)) {
-                    this.startManualSession();
-                    return;
-                }
+                this.offerAlternativeMode(error.message);
+                return;
             }
             
             this.showError(`Camera session failed: ${error.message}`);
@@ -588,6 +632,71 @@ class ARSpeakerApp {
         }
     }
 
+    /**
+     * Add camera feed status indicator to container
+     */
+    addCameraFeedIndicator(status, message) {
+        // Remove any existing indicator
+        const existingIndicator = this.elements.arContainer.querySelector('.camera-feed-status');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+
+        // Create status indicator
+        const indicator = document.createElement('div');
+        indicator.className = `camera-feed-status camera-feed-${status}`;
+        indicator.innerHTML = `
+            <div class="feed-status-icon">${status === 'active' ? '📹' : status === 'error' ? '❌' : '⏳'}</div>
+            <div class="feed-status-text">${message}</div>
+        `;
+        
+        // Add CSS if not already present
+        if (!document.getElementById('camera-feed-status-styles')) {
+            const style = document.createElement('style');
+            style.id = 'camera-feed-status-styles';
+            style.textContent = `
+                .camera-feed-status {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    z-index: 10;
+                    backdrop-filter: blur(5px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                }
+                .camera-feed-active {
+                    background: rgba(0, 150, 0, 0.8);
+                    border-color: rgba(0, 255, 0, 0.3);
+                }
+                .camera-feed-error {
+                    background: rgba(150, 0, 0, 0.8);
+                    border-color: rgba(255, 0, 0, 0.3);
+                }
+                .camera-feed-loading {
+                    background: rgba(0, 100, 150, 0.8);
+                    border-color: rgba(0, 150, 255, 0.3);
+                }
+                .feed-status-icon {
+                    font-size: 14px;
+                }
+                .feed-status-text {
+                    font-weight: 500;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        this.elements.arContainer.appendChild(indicator);
+        this.debugInfo(`📊 Camera feed indicator: ${status} - ${message}`);
+    }
+
     // UI Update Methods
     updateStatus(status) {
         if (this.elements.arStatus) {
@@ -654,6 +763,37 @@ class ARSpeakerApp {
                 this.handleContainerClick(null);
             } else {
                 this.debugWarning('Start manual mode first');
+            }
+        };
+        
+        window.runCameraDiagnostics = async () => {
+            this.debugInfo('🔍 Manual camera diagnostics requested');
+            if (this.cameraSession) {
+                return await this.cameraSession.debugCameraCapabilities();
+            } else {
+                this.debugError('Camera session not available');
+                return { supported: false, reason: 'Camera session not initialized' };
+            }
+        };
+        
+        window.testCameraFallback = async () => {
+            this.debugInfo('🧪 Testing camera fallback constraints');
+            if (this.cameraSession) {
+                try {
+                    const stream = await this.cameraSession.requestCameraWithFallback();
+                    this.debugSuccess('✅ Camera fallback test successful');
+                    // Clean up test stream
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    return { success: true };
+                } catch (error) {
+                    this.debugError(`❌ Camera fallback test failed: ${error.message}`);
+                    return { success: false, error: error.message };
+                }
+            } else {
+                this.debugError('Camera session not available');
+                return { success: false, error: 'Camera session not initialized' };
             }
         };
         

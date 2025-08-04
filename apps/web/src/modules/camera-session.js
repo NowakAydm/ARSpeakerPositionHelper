@@ -209,6 +209,96 @@ export class CameraSession {
     }
 
     /**
+     * Request camera access with progressive fallback constraints
+     */
+    async requestCameraWithFallback() {
+        const log = window.appDebugInfo || console.log;
+        const error = window.appDebugError || console.error;
+        
+        // Define camera constraint configurations in order of preference
+        const constraintConfigs = [
+            {
+                name: 'High-quality rear camera',
+                constraints: {
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280, min: 640 },
+                        height: { ideal: 720, min: 480 }
+                    },
+                    audio: false
+                }
+            },
+            {
+                name: 'Any rear camera',
+                constraints: {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                }
+            },
+            {
+                name: 'Front camera',
+                constraints: {
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                }
+            },
+            {
+                name: 'Any camera (flexible quality)',
+                constraints: {
+                    video: {
+                        width: { ideal: 1280, min: 320 },
+                        height: { ideal: 720, min: 240 }
+                    },
+                    audio: false
+                }
+            },
+            {
+                name: 'Basic camera',
+                constraints: {
+                    video: true,
+                    audio: false
+                }
+            }
+        ];
+
+        // Try each configuration
+        for (let i = 0; i < constraintConfigs.length; i++) {
+            const config = constraintConfigs[i];
+            log(`📹 Attempting camera access: ${config.name}`);
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(config.constraints);
+                log(`✅ Camera access successful with: ${config.name}`);
+                
+                // Log actual camera capabilities
+                const videoTrack = stream.getVideoTracks()[0];
+                if (videoTrack) {
+                    const settings = videoTrack.getSettings();
+                    log(`📹 Camera settings: ${settings.width}x${settings.height}, facing: ${settings.facingMode || 'unknown'}`);
+                }
+                
+                return stream;
+                
+            } catch (constraintError) {
+                error(`❌ Failed ${config.name}: ${constraintError.name} - ${constraintError.message}`);
+                
+                // Continue to next configuration unless this is the last one
+                if (i === constraintConfigs.length - 1) {
+                    throw constraintError;
+                }
+            }
+        }
+    }
+
+    /**
      * Start camera session
      */
     async start() {
@@ -219,17 +309,8 @@ export class CameraSession {
         log('▶️ Starting camera session...');
         
         try {
-            // Request camera access with rear camera preference
-            const constraints = {
-                video: {
-                    facingMode: { ideal: 'environment' }, // Prefer rear camera, fallback to any camera
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                },
-                audio: false
-            };
-
-            this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            // Try multiple camera configurations with progressive fallback
+            this.stream = await this.requestCameraWithFallback();
             this.showStatusMessage('📹 Camera access granted!');
 
             // Call the permission granted callback immediately after permission is granted
@@ -551,6 +632,73 @@ export class CameraSession {
      */
     setFrameCallback(callback) {
         this.frameCallback = callback;
+    }
+
+    /**
+     * Run comprehensive camera diagnostics
+     */
+    async debugCameraCapabilities() {
+        const log = window.appDebugInfo || console.log;
+        const error = window.appDebugError || console.error;
+        
+        log('🔍 === CAMERA DIAGNOSTICS START ===');
+        
+        // Check basic browser support
+        log(`📱 Navigator.mediaDevices available: ${!!navigator.mediaDevices}`);
+        log(`📱 getUserMedia available: ${!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)}`);
+        log(`📱 User agent: ${navigator.userAgent}`);
+        
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            error('❌ Camera API not supported in this browser');
+            return { supported: false, reason: 'Camera API not supported' };
+        }
+        
+        // Try to enumerate devices
+        try {
+            if (navigator.mediaDevices.enumerateDevices) {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                
+                log(`📹 Total devices found: ${devices.length}`);
+                log(`📹 Video input devices: ${videoDevices.length}`);
+                
+                videoDevices.forEach((device, index) => {
+                    log(`📹 Device ${index + 1}: ${device.label || 'Unknown'} (${device.deviceId.substring(0, 8)}...)`);
+                });
+                
+                if (videoDevices.length === 0) {
+                    error('❌ No video input devices found');
+                    return { supported: false, reason: 'No camera devices detected' };
+                }
+            } else {
+                log('⚠️ Device enumeration not supported');
+            }
+        } catch (enumError) {
+            error(`❌ Device enumeration failed: ${enumError.message}`);
+        }
+        
+        // Test basic camera access
+        try {
+            log('📹 Testing basic camera access...');
+            const testStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            const videoTrack = testStream.getVideoTracks()[0];
+            
+            if (videoTrack) {
+                const settings = videoTrack.getSettings();
+                log(`✅ Basic camera test successful: ${settings.width}x${settings.height}`);
+                
+                // Clean up test stream
+                testStream.getTracks().forEach(track => track.stop());
+                
+                return { supported: true, settings };
+            }
+        } catch (testError) {
+            error(`❌ Basic camera test failed: ${testError.name} - ${testError.message}`);
+            return { supported: false, reason: `Camera test failed: ${testError.message}` };
+        }
+        
+        log('🔍 === CAMERA DIAGNOSTICS END ===');
+        return { supported: true };
     }
 
     /**
