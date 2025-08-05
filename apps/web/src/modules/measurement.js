@@ -219,13 +219,33 @@ export class MeasurementTool {
         // Start with larger scale and animate to normal size
         pointMesh.scale.set(2, 2, 2);
         
+        // Add pulsing effect for better visibility
+        let pulseDirection = -1;
+        let pulseCount = 0;
+        const maxPulses = 3;
+        
         const animate = () => {
             const scale = pointMesh.scale.x;
-            if (scale > 1) {
-                pointMesh.scale.multiplyScalar(0.95);
+            
+            if (pulseCount < maxPulses) {
+                // Pulse effect
+                if (scale <= 1) {
+                    pulseDirection = 1;
+                    pulseCount++;
+                } else if (scale >= 1.3) {
+                    pulseDirection = -1;
+                }
+                
+                pointMesh.scale.multiplyScalar(1 + (pulseDirection * 0.02));
                 requestAnimationFrame(animate);
             } else {
-                pointMesh.scale.set(1, 1, 1);
+                // Final settle to normal size
+                if (scale > 1) {
+                    pointMesh.scale.multiplyScalar(0.95);
+                    requestAnimationFrame(animate);
+                } else {
+                    pointMesh.scale.set(1, 1, 1);
+                }
             }
         };
         
@@ -248,6 +268,9 @@ export class MeasurementTool {
         
         const line = new window.THREE.Line(lineGeometry, this.lineMaterial);
         line.name = `measurementLine_${this.lines.length}`;
+        
+        // Add animated line appearance
+        this.animateLineAppearance(line);
         
         // Calculate distance
         const distance = point1.position.distanceTo(point2.position);
@@ -273,6 +296,28 @@ export class MeasurementTool {
         }
         
         log(`📏 Line created: ${this.formatDistance(distance)}`);
+    }
+
+    /**
+     * Animate line appearance for visual feedback
+     */
+    animateLineAppearance(lineMesh) {
+        if (!lineMesh || !lineMesh.material) return;
+        
+        // Start with transparent and fade in
+        const originalOpacity = lineMesh.material.opacity;
+        lineMesh.material.opacity = 0;
+        
+        let currentOpacity = 0;
+        const animate = () => {
+            if (currentOpacity < originalOpacity) {
+                currentOpacity += 0.05;
+                lineMesh.material.opacity = Math.min(currentOpacity, originalOpacity);
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
     }
 
     /**

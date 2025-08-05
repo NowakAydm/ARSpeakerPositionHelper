@@ -641,6 +641,9 @@ class ARSpeakerApp {
             z: -2 - Math.random() * 2 // Add some depth variation
         };
         
+        // Add visual feedback at click location
+        this.showMeasurementPointFeedback(event.clientX - rect.left, event.clientY - rect.top);
+        
         // Initialize simplified measurement points array if not exists
         if (!this.simplifiedMeasurementPoints) {
             this.simplifiedMeasurementPoints = [];
@@ -657,6 +660,26 @@ class ARSpeakerApp {
             this.calculateAndDisplaySimplifiedDistance();
             this.resetForNewSimplifiedMeasurement();
         }
+    }
+
+    /**
+     * Show visual feedback at measurement point placement
+     */
+    showMeasurementPointFeedback(x, y) {
+        const feedback = document.createElement('div');
+        feedback.className = 'measurement-point-feedback';
+        feedback.textContent = '📍';
+        feedback.style.left = `${x}px`;
+        feedback.style.top = `${y}px`;
+        
+        this.elements.arContainer.appendChild(feedback);
+        
+        // Remove feedback after animation
+        setTimeout(() => {
+            if (feedback.parentNode) {
+                feedback.parentNode.removeChild(feedback);
+            }
+        }, 800);
     }
 
     /**
@@ -953,14 +976,30 @@ class ARSpeakerApp {
     }
 
     /**
-     * Update measurement statistics display
+     * Update measurement statistics display with visual feedback
      */
     updateMeasurementStats(stats) {
         if (this.elements.pointCount) {
             this.elements.pointCount.textContent = stats.pointCount || 0;
+            // Add update animation
+            this.elements.pointCount.classList.add('updated');
+            setTimeout(() => {
+                this.elements.pointCount.classList.remove('updated');
+            }, 500);
         }
+        
         if (this.elements.totalDistance) {
             this.elements.totalDistance.textContent = stats.formattedTotalDistance || '0 m';
+            // Add update animation
+            this.elements.totalDistance.classList.add('updated');
+            setTimeout(() => {
+                this.elements.totalDistance.classList.remove('updated');
+            }, 500);
+        }
+        
+        // Update status for better user feedback
+        if (this.currentMode === 'measuring') {
+            this.updateStatus(`Measuring Mode - ${stats.pointCount} points, Total: ${stats.formattedTotalDistance}`);
         }
     }
 
@@ -1330,11 +1369,19 @@ class ARSpeakerApp {
         if (this.currentMode === 'positioning') {
             this.currentMode = 'measuring';
             this.measurementTool.activate();
+            
+            // Add visual measurement mode styling
+            this.elements.arContainer.classList.add('measuring-mode');
+            
             this.updateStatus('Measuring Mode - Tap to place measurement points');
             this.debugInfo('📏 Switched to measuring mode');
         } else {
             this.currentMode = 'positioning';
             this.measurementTool.deactivate();
+            
+            // Remove visual measurement mode styling
+            this.elements.arContainer.classList.remove('measuring-mode');
+            
             this.updateStatus('Positioning Mode - Tap to set speaker/listener positions');
             this.debugInfo('📍 Switched to positioning mode');
         }
