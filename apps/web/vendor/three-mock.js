@@ -189,6 +189,17 @@ window.THREE = {
         this.geometry = geometry;
         this.material = material;
         this.position = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+    },
+    
+    CylinderGeometry: function(radiusTop, radiusBottom, height, radialSegments, heightSegments) {
+        this.parameters = {
+            radiusTop: radiusTop || 1,
+            radiusBottom: radiusBottom || 1,
+            height: height || 1,
+            radialSegments: radialSegments || 8,
+            heightSegments: heightSegments || 1
+        };
+        this.dispose = function() {};
     }
 };
 
