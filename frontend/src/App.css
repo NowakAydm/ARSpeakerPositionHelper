@@ -1,0 +1,303 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.App-header {
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  margin: 0 20px 20px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.App-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.App-header p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.App-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Status Panel */
+.status-panel {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.status-panel h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.status-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.status-item.supported {
+  background-color: #e8f5e8;
+  border: 1px solid #c3e6c3;
+}
+
+.status-item.not-supported {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+}
+
+.status-icon {
+  font-size: 1.2rem;
+}
+
+/* Stats Panel */
+.stats-panel {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.stats-panel h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Main UI */
+.main-ui {
+  margin-bottom: 30px;
+}
+
+/* Instructions Panel */
+.instructions-panel {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  text-align: left;
+}
+
+.instructions-panel h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.instructions-panel h4 {
+  margin: 20px 0 10px 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.instructions-panel ol {
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.instructions-panel ol li {
+  margin-bottom: 8px;
+}
+
+.instructions-panel ol li strong {
+  color: #007bff;
+}
+
+.tips {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.tips ul {
+  margin: 10px 0 0 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.tips ul li {
+  margin-bottom: 6px;
+}
+
+/* Compatibility Warning */
+.compatibility-warning {
+  background-color: rgba(255, 243, 205, 0.95);
+  border: 1px solid #ffeaa7;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.compatibility-warning h3 {
+  margin: 0 0 10px 0;
+  color: #856404;
+}
+
+.compatibility-warning p {
+  margin: 0;
+  color: #856404;
+  line-height: 1.5;
+}
+
+/* Footer */
+.App-footer {
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  margin: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  color: #666;
+}
+
+.App-footer p {
+  margin: 5px 0;
+}
+
+.App-footer a {
+  color: #007bff;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.App-footer a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .App {
+    padding: 10px;
+  }
+  
+  .App-header {
+    margin: 0 0 20px 0;
+    padding: 15px;
+  }
+  
+  .App-header h1 {
+    font-size: 2rem;
+  }
+  
+  .App-main {
+    padding: 0;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .status-items {
+    gap: 8px;
+  }
+  
+  .status-item {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .instructions-panel {
+    padding: 20px;
+  }
+  
+  .instructions-panel ol {
+    padding-left: 15px;
+  }
+  
+  .tips ul {
+    padding-left: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .App-header h1 {
+    font-size: 1.7rem;
+  }
+  
+  .App-header p {
+    font-size: 1rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
