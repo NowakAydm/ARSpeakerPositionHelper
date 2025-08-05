@@ -130,6 +130,65 @@ window.THREE = {
             this.ray.direction.y = -mouse.y;
             this.ray.direction.z = -1;
         };
+        this.intersectObjects = function(objects) {
+            // Mock intersection results
+            return [{
+                point: new window.THREE.Vector3(0, 0, -2),
+                distance: 2
+            }];
+        };
+    },
+    
+    Group: function() {
+        this.children = [];
+        this.position = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+        this.rotation = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+        this.scale = { x: 1, y: 1, z: 1, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+        this.add = function(object) {
+            this.children.push(object);
+        };
+        this.remove = function(object) {
+            const index = this.children.indexOf(object);
+            if (index > -1) this.children.splice(index, 1);
+        };
+    },
+    
+    PlaneGeometry: function(width, height) {
+        this.width = width || 1;
+        this.height = height || 1;
+        this.dispose = function() {};
+    },
+    
+    SphereGeometry: function(radius, widthSegments, heightSegments) {
+        this.radius = radius || 1;
+        this.widthSegments = widthSegments || 8;
+        this.heightSegments = heightSegments || 6;
+        this.dispose = function() {};
+    },
+    
+    LineBasicMaterial: function(options) {
+        options = options || {};
+        this.color = options.color || 0xffffff;
+        this.linewidth = options.linewidth || 1;
+        this.transparent = options.transparent || false;
+        this.opacity = options.opacity || 1;
+        this.dispose = function() {};
+    },
+    
+    BufferGeometry: function() {
+        this.setAttribute = function(name, attribute) {};
+        this.dispose = function() {};
+    },
+    
+    Float32BufferAttribute: function(array, itemSize) {
+        this.array = array;
+        this.itemSize = itemSize;
+    },
+    
+    Line: function(geometry, material) {
+        this.geometry = geometry;
+        this.material = material;
+        this.position = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
     }
 };
 

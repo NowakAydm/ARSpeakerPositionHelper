@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AR Speaker Position Helper - Mobile Optimized">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AR Speaker">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon and Apple Touch Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png">
+    
+    <title>AR Speaker Position Helper - Mobile</title>
+    
+    <!-- Mobile-Optimized Styles -->
+    <link rel="stylesheet" href="src/styles_mobile.css">
+</head>
+<body>
+    <!-- Main App Container -->
+    <div id="app">
+        <!-- Header -->
+        <header class="mobile-header">
+            <h1>AR Speaker Helper</h1>
+            <p class="subtitle">Tap twice to measure distances</p>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="mobile-main">
+            <!-- AR Camera View Container -->
+            <div id="ar-container" class="mobile-ar-container">
+                <div class="ar-placeholder">
+                    <div class="placeholder-content">
+                        <div class="placeholder-icon">📱</div>
+                        <h2>Camera View</h2>
+                        <p>Tap "Start Session" to begin</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Controls -->
+            <div class="mobile-controls">
+                <button id="mobile-start-btn" class="mobile-start-button">
+                    Start Session
+                </button>
+            </div>
+
+            <!-- Status Display -->
+            <div class="mobile-status-container">
+                <div id="mobile-status" class="mobile-status">
+                    Tap "Start Session" to begin measuring
+                </div>
+            </div>
+
+            <!-- Measurement Results -->
+            <div class="mobile-results">
+                <div id="distance-display" class="distance-display"></div>
+                <div id="coordinates-display" class="coordinates-display"></div>
+            </div>
+        </main>
+
+        <!-- Debug Toggle (Hidden by default) -->
+        <button id="debug-toggle" class="debug-toggle">🔍</button>
+
+        <!-- Debug Console (Hidden by default) -->
+        <div id="debug-console" class="debug-console hidden">
+            <div class="debug-header">
+                <span>Debug Console</span>
+                <button class="debug-close" onclick="document.getElementById('debug-console').classList.add('hidden')">×</button>
+            </div>
+            <div class="debug-content" id="debug-content">
+                <div class="debug-message info">[Debug] Mobile AR app console initialized</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p id="loading-message">Initializing mobile AR experience...</p>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Error</h3>
+            <p id="error-message">An error occurred</p>
+            <button id="error-close" class="primary-button">OK</button>
+        </div>
+    </div>
+
+    <!-- External Dependencies -->
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script>
+        // Fallback to local mock if CDN fails
+        if (!window.THREE) {
+            document.write('<script src="vendor/three-mock.js"><\/script>');
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
+    <script>
+        // Fallback to local mock if CDN fails
+        if (!window.tf || !window.cocoSsd) {
+            document.write('<script src="vendor/tf-mock.js"><\/script>');
+        }
+    </script>
+    
+    <!-- Mobile App Script -->
+    <script type="module" src="src/app_mobile_improved.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('✅ SW registered:', registration);
+                    })
+                    .catch((error) => {
+                        console.log('❌ SW registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
