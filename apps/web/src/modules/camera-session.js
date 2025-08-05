@@ -303,12 +303,12 @@ export class CameraSession {
         const centerSphere = new window.THREE.Mesh(centerGeometry, centerMaterial);
         this.gyroGizmo.add(centerSphere);
         
-        // Add text labels for debugging
-        this.createGyroDebugPanel();
+        // Add text labels for debugging - REMOVED (replaced by simplified XYZ gizmo)
+        // this.createGyroDebugPanel();
         
-        // Position the gizmo in the top-right corner of the view
-        this.gyroGizmo.position.set(1.5, 1, -3);
-        this.gyroGizmo.scale.set(0.5, 0.5, 0.5);
+        // Position the gizmo in the bottom-left corner of the view (better for mobile)
+        this.gyroGizmo.position.set(-0.3, -0.2, -0.5);
+        this.gyroGizmo.scale.set(2, 2, 2);
         
         // Add to scene
         this.scene.add(this.gyroGizmo);
@@ -320,36 +320,20 @@ export class CameraSession {
             gamma: 0
         };
         
-        console.log('🧭 Gyroscope gizmo created');
+        console.log('🧭 XYZ Gizmo created (replaces gyroscope debug window)');
     }
 
     /**
-     * Create debug panel for gyroscope data
+     * Create debug panel for gyroscope data - REMOVED
+     * Replaced with simplified XYZ gizmo overlay
      */
     createGyroDebugPanel() {
-        // Create HTML overlay for gyro data
-        this.gyroDebugDiv = document.createElement('div');
-        this.gyroDebugDiv.style.position = 'absolute';
-        this.gyroDebugDiv.style.top = '10px';
-        this.gyroDebugDiv.style.right = '10px';
-        this.gyroDebugDiv.style.background = 'rgba(0, 0, 0, 0.8)';
-        this.gyroDebugDiv.style.color = '#00ff00';
-        this.gyroDebugDiv.style.padding = '10px';
-        this.gyroDebugDiv.style.fontFamily = 'monospace';
-        this.gyroDebugDiv.style.fontSize = '12px';
-        this.gyroDebugDiv.style.borderRadius = '5px';
-        this.gyroDebugDiv.style.zIndex = '1000';
-        this.gyroDebugDiv.style.pointerEvents = 'none';
-        this.gyroDebugDiv.innerHTML = `
-            <div>🧭 GYROSCOPE GIZMO</div>
-            <div>Status: Initializing...</div>
-            <div>Alpha (Z): 0°</div>
-            <div>Beta (X): 0°</div>
-            <div>Gamma (Y): 0°</div>
-        `;
+        // Debug panel functionality removed as per requirements
+        // Gyroscope debug window replaced with XYZ gizmo overlay
+        this.gyroDebugDiv = null;
         
-        // Add to container when camera starts
-        this.shouldAddGyroDebug = true;
+        // No debug div to add - removed as per requirements
+        this.shouldAddGyroDebug = false;
     }
 
     /**
@@ -876,17 +860,7 @@ export class CameraSession {
                                 this.gyroGizmo.rotation.y = Math.sin(time) * 0.3;
                                 this.gyroGizmo.rotation.x = Math.cos(time * 0.7) * 0.2;
                                 
-                                // Update debug panel for fallback mode
-                                if (this.gyroDebugDiv && renderFrameCount % 30 === 0) {
-                                    this.gyroDebugDiv.innerHTML = `
-                                        <div>🧭 GYROSCOPE GIZMO</div>
-                                        <div style="color: #ffaa00;">Status: Demo Mode</div>
-                                        <div>Alpha (Z): ${(Math.sin(time) * 30).toFixed(1)}°</div>
-                                        <div>Beta (X): ${(Math.cos(time * 0.7) * 20).toFixed(1)}°</div>
-                                        <div>Gamma (Y): 0.0°</div>
-                                        <div style="font-size: 10px; color: #888;">No device motion detected</div>
-                                    `;
-                                }
+                                // Debug panel removed - XYZ gizmo provides visual feedback instead
                             }
                         }
                         
