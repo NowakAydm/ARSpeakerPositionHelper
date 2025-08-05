@@ -301,16 +301,12 @@ class ARSpeakerApp {
             });
         }
 
-        // Container clicks to add speakers/position or measurement points
+        // Container clicks for simplified "click twice" measurement flow
         if (this.elements.arContainer) {
             this.elements.arContainer.addEventListener('click', (event) => {
                 if (this.isSessionActive) {
-                    if (this.currentMode === 'measuring') {
-                        // Measurement tool will handle its own clicks when active
-                        return;
-                    } else {
-                        this.handleContainerClick(event);
-                    }
+                    // Simplified flow: always handle as measurement clicks
+                    this.handleSimplifiedMeasurementClick(event);
                 }
             });
         }
@@ -359,9 +355,9 @@ class ARSpeakerApp {
             this.speakers = [];
             this.userPosition = null;
             
-            this.updateStatus('Manual Mode Active - Click container to set listener position first');
+            this.updateStatus('Manual Mode - Tap twice on screen to measure distance');
             this.updateSpeakerCount(0);
-            this.updatePositionStatus('Click to set');
+            this.updatePositionStatus('Measuring mode');
             this.updateTriangleQuality('-');
             this.updateInstructionStep(2);
             
@@ -491,7 +487,8 @@ class ARSpeakerApp {
             await this.cameraSession.start();
             this.debugSuccess('✅ Camera started successfully');
 
-            this.addCameraFeedIndicator('active', 'Camera feed active');
+            // No green notification - removed as per requirements
+            // this.addCameraFeedIndicator('active', 'Camera feed active');
 
             // Set session as active
             this.isSessionActive = true;
@@ -576,9 +573,9 @@ class ARSpeakerApp {
             this.enableMeasurementControls();
             this.updateModeIndicator();
             
-            this.updateStatus('Manual Mode - Click to set positions');
+            this.updateStatus('Manual Mode - Tap twice on screen to measure distance');
             this.updateSpeakerCount(0);
-            this.updatePositionStatus('Not Set');
+            this.updatePositionStatus('Measuring mode');
             this.updateTriangleQuality('-');
             
             this.debugSuccess('✅ Manual mode started successfully');
@@ -627,48 +624,231 @@ class ARSpeakerApp {
     }
 
     /**
-     * Handle container clicks to set positions
+     * Handle simplified "click twice" measurement interaction
      */
-    handleContainerClick(event) {
-        this.debugInfo('👆 Container clicked');
+    handleSimplifiedMeasurementClick(event) {
+        this.debugInfo('👆 Simplified measurement click detected');
         
-        if (!this.userPosition) {
-            // First click sets listener position
-            this.userPosition = { x: 0, y: 0, z: 0 };
-            this.updatePositionStatus('Set by click');
-            this.updateStatus('Manual Mode - Listener position set. Click to place left speaker.');
-            this.debugInfo('👤 User position set');
-        } else if (this.speakers.length < 2) {
-            // Add speakers up to maximum of 2
-            const speakerLabel = this.speakers.length === 0 ? 'left' : 'right';
-            const speakerId = `speaker_${speakerLabel}`;
-            const newSpeaker = {
-                id: speakerId,
-                type: 'speaker',
-                label: speakerLabel,
-                position: {
-                    x: this.speakers.length === 0 ? -2 : 2, // Left speaker at -2, right at +2
-                    y: 0,
-                    z: -2 - Math.random() * 2
+        // Calculate 3D coordinates from screen coordinates
+        const rect = this.elements.arContainer.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // Convert to world coordinates (simplified for demo)
+        const worldPoint = {
+            x: x * 2,
+            y: y * 2,
+            z: -2 - Math.random() * 2 // Add some depth variation
+        };
+        
+        // Initialize simplified measurement points array if not exists
+        if (!this.simplifiedMeasurementPoints) {
+            this.simplifiedMeasurementPoints = [];
+        }
+        
+        this.addSimplifiedMeasurementPoint(worldPoint);
+        
+        // Log coordinates (console and debug)
+        this.logCoordinates(worldPoint, this.simplifiedMeasurementPoints.length);
+        
+        // If this is the second point, draw line and calculate distance
+        if (this.simplifiedMeasurementPoints.length === 2) {
+            this.createSimplifiedMeasurementLine();
+            this.calculateAndDisplaySimplifiedDistance();
+            this.resetForNewSimplifiedMeasurement();
+        }
+    }
+
+    /**
+     * Add a measurement point to the scene (simplified version)
+     */
+    addSimplifiedMeasurementPoint(worldPoint) {
+        // Use existing measurement tool if available, otherwise create simple point
+        if (this.measurementTool && this.measurementTool.scene) {
+            try {
+                // Create point geometry
+                const geometry = new window.THREE.SphereGeometry(0.02, 8, 6);
+                const material = new window.THREE.MeshBasicMaterial({ 
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const point = new window.THREE.Mesh(geometry, material);
+                
+                point.position.set(worldPoint.x, worldPoint.y, worldPoint.z);
+                
+                // Add to camera session scene or manual mode scene
+                let targetScene = null;
+                if (this.cameraSession && this.cameraSession.scene) {
+                    targetScene = this.cameraSession.scene;
+                } else if (this.manualModeScene) {
+                    targetScene = this.manualModeScene;
                 }
-            };
+                
+                if (targetScene) {
+                    targetScene.add(point);
+                }
+                
+                // Store point data
+                this.simplifiedMeasurementPoints.push({
+                    position: worldPoint,
+                    mesh: point
+                });
+                
+                this.debugSuccess(`Simplified measurement point ${this.simplifiedMeasurementPoints.length} added at (${worldPoint.x.toFixed(2)}, ${worldPoint.y.toFixed(2)}, ${worldPoint.z.toFixed(2)})`);
+                
+            } catch (error) {
+                this.debugError(`Failed to add simplified measurement point: ${error.message}`);
+            }
+        }
+    }
+
+    /**
+     * Create line between two simplified measurement points
+     */
+    createSimplifiedMeasurementLine() {
+        if (!window.THREE || this.simplifiedMeasurementPoints.length !== 2) return;
+
+        try {
+            const point1 = this.simplifiedMeasurementPoints[0].position;
+            const point2 = this.simplifiedMeasurementPoints[1].position;
             
-            this.speakers.push(newSpeaker);
-            this.updateSpeakerCount(this.speakers.length);
+            // Create line geometry
+            const geometry = new window.THREE.BufferGeometry();
+            const positions = new Float32Array([
+                point1.x, point1.y, point1.z,
+                point2.x, point2.y, point2.z
+            ]);
             
-            if (this.speakers.length === 1) {
-                this.updateStatus('Manual Mode - Left speaker placed. Click to place right speaker.');
-            } else if (this.speakers.length === 2) {
-                this.calculateOptimalTriangle();
-                this.updateStatus('Manual Mode - Stereo setup complete! Triangle calculated.');
+            geometry.setAttribute('position', new window.THREE.BufferAttribute(positions, 3));
+            
+            const material = new window.THREE.LineBasicMaterial({ 
+                color: 0xffff00,
+                linewidth: 3,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            this.simplifiedMeasurementLine = new window.THREE.Line(geometry, material);
+            
+            // Add to appropriate scene
+            let targetScene = null;
+            if (this.cameraSession && this.cameraSession.scene) {
+                targetScene = this.cameraSession.scene;
+            } else if (this.manualModeScene) {
+                targetScene = this.manualModeScene;
             }
             
-            this.debugInfo(`🔊 Added ${speakerLabel} speaker (${this.speakers.length}/2)`);
-        } else {
-            // All speakers placed, inform user
-            this.updateStatus('Manual Mode - Both speakers placed. Use Reset to start over.');
-            this.debugInfo('🔊 All speakers already placed');
+            if (targetScene) {
+                targetScene.add(this.simplifiedMeasurementLine);
+            }
+            
+            this.debugSuccess('Simplified measurement line created between points');
+            
+        } catch (error) {
+            this.debugError(`Failed to create simplified measurement line: ${error.message}`);
         }
+    }
+
+    /**
+     * Calculate and display distance between simplified measurement points
+     */
+    calculateAndDisplaySimplifiedDistance() {
+        if (this.simplifiedMeasurementPoints.length !== 2) return;
+
+        const point1 = this.simplifiedMeasurementPoints[0].position;
+        const point2 = this.simplifiedMeasurementPoints[1].position;
+        
+        const distance = Math.sqrt(
+            Math.pow(point2.x - point1.x, 2) +
+            Math.pow(point2.y - point1.y, 2) +
+            Math.pow(point2.z - point1.z, 2)
+        );
+        
+        // Update UI status with distance
+        this.updateStatus(`Distance: ${distance.toFixed(3)} units between measurement points`);
+        
+        // Log distance
+        this.debugSuccess(`Distance calculated: ${distance.toFixed(3)} units`);
+        
+        // Log relationship between points
+        this.logPointRelationship(point1, point2, distance);
+    }
+
+    /**
+     * Log 3D coordinates to console and debug
+     */
+    logCoordinates(point, pointNumber) {
+        const coordText = `Point ${pointNumber}: X=${point.x.toFixed(3)}, Y=${point.y.toFixed(3)}, Z=${point.z.toFixed(3)}`;
+        
+        // Log to console
+        console.log(`🎯 ${coordText}`);
+        
+        // Log to debug console
+        this.debugInfo(`🎯 ${coordText}`);
+    }
+
+    /**
+     * Log relationship between points
+     */
+    logPointRelationship(point1, point2, distance) {
+        const relationshipText = `Distance between points: ${distance.toFixed(3)} units`;
+        const vectorText = `Vector: Δx=${(point2.x - point1.x).toFixed(3)}, Δy=${(point2.y - point1.y).toFixed(3)}, Δz=${(point2.z - point1.z).toFixed(3)}`;
+        
+        console.log(`📏 ${relationshipText}`);
+        console.log(`📐 ${vectorText}`);
+        
+        this.debugInfo(`📏 ${relationshipText}`);
+        this.debugInfo(`📐 ${vectorText}`);
+    }
+
+    /**
+     * Reset for new simplified measurement after completing a measurement
+     */
+    resetForNewSimplifiedMeasurement() {
+        setTimeout(() => {
+            // Clear previous measurement
+            this.clearSimplifiedMeasurement();
+            
+            // Update status
+            this.updateStatus('Manual Mode - Tap twice on screen to measure distance');
+            
+            this.debugInfo('🔄 Ready for new simplified measurement');
+        }, 3000); // Show result for 3 seconds
+    }
+
+    /**
+     * Clear current simplified measurement
+     */
+    clearSimplifiedMeasurement() {
+        if (!this.simplifiedMeasurementPoints) return;
+
+        // Get target scene
+        let targetScene = null;
+        if (this.cameraSession && this.cameraSession.scene) {
+            targetScene = this.cameraSession.scene;
+        } else if (this.manualModeScene) {
+            targetScene = this.manualModeScene;
+        }
+
+        if (targetScene) {
+            // Remove measurement points
+            this.simplifiedMeasurementPoints.forEach(pointData => {
+                targetScene.remove(pointData.mesh);
+                if (pointData.mesh.geometry) pointData.mesh.geometry.dispose();
+                if (pointData.mesh.material) pointData.mesh.material.dispose();
+            });
+            
+            // Remove measurement line
+            if (this.simplifiedMeasurementLine) {
+                targetScene.remove(this.simplifiedMeasurementLine);
+                if (this.simplifiedMeasurementLine.geometry) this.simplifiedMeasurementLine.geometry.dispose();
+                if (this.simplifiedMeasurementLine.material) this.simplifiedMeasurementLine.material.dispose();
+                this.simplifiedMeasurementLine = null;
+            }
+        }
+        
+        this.simplifiedMeasurementPoints = [];
     }
 
     /**
