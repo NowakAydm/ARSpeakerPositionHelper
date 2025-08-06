@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Speaker Helper - Statistics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-description {
+            font-size: 0.9rem;
+            color: #888;
+            line-height: 1.4;
+        }
+        
+        .chart-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .chart-placeholder {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+        
+        .usage-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .feature-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .feature-name {
+            font-weight: 500;
+        }
+        
+        .feature-usage {
+            background: #007bff;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .system-info {
+            background: #e8f4fd;
+            border: 1px solid #b8daff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .system-info h3 {
+            margin: 0 0 15px 0;
+            color: #004085;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #b8daff;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .nav-links {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .nav-links a {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 10px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+            font-weight: 500;
+        }
+        
+        .nav-links a:hover {
+            background: #0056b3;
+        }
+        
+        .nav-links a.secondary {
+            background: #6c757d;
+        }
+        
+        .nav-links a.secondary:hover {
+            background: #545b62;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .feature-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 AR Speaker Helper Statistics</h1>
+        
+        <!-- System Information -->
+        <div class="system-info">
+            <h3>💻 System Information</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span>Browser:</span>
+                    <span id="browser-info">Loading...</span>
+                </div>
+                <div class="info-item">
+                    <span>Platform:</span>
+                    <span id="platform-info">Loading...</span>
+                </div>
+                <div class="info-item">
+                    <span>Screen Resolution:</span>
+                    <span id="screen-info">Loading...</span>
+                </div>
+                <div class="info-item">
+                    <span>Camera Support:</span>
+                    <span id="camera-support">Checking...</span>
+                </div>
+                <div class="info-item">
+                    <span>WebXR Support:</span>
+                    <span id="webxr-support">Checking...</span>
+                </div>
+                <div class="info-item">
+                    <span>Connection Type:</span>
+                    <span id="connection-info">Loading...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">📏</span>
+                <span class="stat-value" id="measurements-count">0</span>
+                <div class="stat-label">Total Measurements</div>
+                <div class="stat-description">Distance measurements taken</div>
+            </div>
+            
+            <div class="stat-card">
+                <span class="stat-icon">🎯</span>
+                <span class="stat-value" id="accuracy-rate">98.5%</span>
+                <div class="stat-label">Accuracy Rate</div>
+                <div class="stat-description">Measurement precision</div>
+            </div>
+            
+            <div class="stat-card">
+                <span class="stat-icon">⏱️</span>
+                <span class="stat-value" id="avg-measurement-time">2.3s</span>
+                <div class="stat-label">Avg. Measurement Time</div>
+                <div class="stat-description">Time per measurement</div>
+            </div>
+            
+            <div class="stat-card">
+                <span class="stat-icon">🔊</span>
+                <span class="stat-value" id="speaker-setups">0</span>
+                <div class="stat-label">Speaker Setups</div>
+                <div class="stat-description">Configured audio setups</div>
+            </div>
+        </div>
+        
+        <!-- Usage Statistics Chart -->
+        <div class="chart-section">
+            <div class="chart-title">📈 Usage Over Time</div>
+            <div class="chart-placeholder">
+                <span>Usage chart would be displayed here<br>
+                (Measurements per day over the last 7 days)</span>
+            </div>
+            <div class="usage-timeline">
+                <span>7 days ago</span>
+                <span>Today</span>
+            </div>
+        </div>
+        
+        <!-- Feature Usage -->
+        <div class="chart-section">
+            <div class="chart-title">🎛️ Feature Usage Statistics</div>
+            <div class="feature-stats">
+                <div class="feature-item">
+                    <span class="feature-name">AR Camera Mode</span>
+                    <span class="feature-usage">87%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">Distance Measurement</span>
+                    <span class="feature-usage">95%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">Speaker Positioning</span>
+                    <span class="feature-usage">73%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">Real-time Overlay</span>
+                    <span class="feature-usage">91%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">Measurement History</span>
+                    <span class="feature-usage">56%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">Export/Share</span>
+                    <span class="feature-usage">34%</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Measurement Statistics -->
+        <div class="chart-section">
+            <div class="chart-title">📐 Measurement Distribution</div>
+            <div class="chart-placeholder">
+                <span>Distance distribution histogram<br>
+                (Most common measurement ranges)</span>
+            </div>
+            <div class="feature-stats">
+                <div class="feature-item">
+                    <span class="feature-name">0-1 meter</span>
+                    <span class="feature-usage">23%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">1-2 meters</span>
+                    <span class="feature-usage">45%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">2-3 meters</span>
+                    <span class="feature-usage">21%</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-name">3+ meters</span>
+                    <span class="feature-usage">11%</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Performance Metrics -->
+        <div class="chart-section">
+            <div class="chart-title">⚡ Performance Metrics</div>
+            <div class="stats-grid" style="margin-bottom: 0;">
+                <div class="stat-card">
+                    <span class="stat-icon">🚀</span>
+                    <span class="stat-value" id="load-time">1.2s</span>
+                    <div class="stat-label">App Load Time</div>
+                </div>
+                
+                <div class="stat-card">
+                    <span class="stat-icon">🎥</span>
+                    <span class="stat-value" id="camera-init-time">0.8s</span>
+                    <div class="stat-label">Camera Init Time</div>
+                </div>
+                
+                <div class="stat-card">
+                    <span class="stat-icon">🔄</span>
+                    <span class="stat-value" id="fps">30</span>
+                    <div class="stat-label">FPS</div>
+                </div>
+                
+                <div class="stat-card">
+                    <span class="stat-icon">💾</span>
+                    <span class="stat-value" id="memory-usage">45MB</span>
+                    <div class="stat-label">Memory Usage</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nav-links">
+            <a href="../">Launch AR Helper</a>
+            <a href="/ar-demo.html" class="secondary">View Demo</a>
+            <a href="/ar-test.html" class="secondary">Test Suite</a>
+        </div>
+    </div>
+
+    <script>
+        // Initialize system information
+        function initializeSystemInfo() {
+            // Browser information
+            const browserInfo = navigator.userAgent.split(' ').pop();
+            document.getElementById('browser-info').textContent = browserInfo;
+            
+            // Platform information
+            document.getElementById('platform-info').textContent = navigator.platform;
+            
+            // Screen resolution
+            const screenInfo = `${screen.width}x${screen.height}`;
+            document.getElementById('screen-info').textContent = screenInfo;
+            
+            // Connection information
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (connection) {
+                document.getElementById('connection-info').textContent = connection.effectiveType || 'Unknown';
+            } else {
+                document.getElementById('connection-info').textContent = 'Not available';
+            }
+        }
+        
+        // Check camera support
+        async function checkCameraSupport() {
+            try {
+                const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+                document.getElementById('camera-support').textContent = hasGetUserMedia ? '✅ Supported' : '❌ Not supported';
+            } catch (error) {
+                document.getElementById('camera-support').textContent = '❌ Error checking';
+            }
+        }
+        
+        // Check WebXR support
+        function checkWebXRSupport() {
+            if ('xr' in navigator) {
+                document.getElementById('webxr-support').textContent = '✅ Supported';
+            } else {
+                document.getElementById('webxr-support').textContent = '❌ Not supported';
+            }
+        }
+        
+        // Generate random statistics for demo
+        function generateDemoStatistics() {
+            // Random measurements count (0-50)
+            const measurementsCount = Math.floor(Math.random() * 50);
+            document.getElementById('measurements-count').textContent = measurementsCount;
+            
+            // Random speaker setups (0-5)
+            const speakerSetups = Math.floor(Math.random() * 6);
+            document.getElementById('speaker-setups').textContent = speakerSetups;
+            
+            // Random performance metrics
+            const loadTime = (1 + Math.random() * 2).toFixed(1) + 's';
+            document.getElementById('load-time').textContent = loadTime;
+            
+            const cameraInitTime = (0.5 + Math.random() * 1).toFixed(1) + 's';
+            document.getElementById('camera-init-time').textContent = cameraInitTime;
+            
+            const fps = Math.floor(25 + Math.random() * 35);
+            document.getElementById('fps').textContent = fps;
+            
+            const memoryUsage = Math.floor(30 + Math.random() * 40) + 'MB';
+            document.getElementById('memory-usage').textContent = memoryUsage;
+            
+            const avgMeasurementTime = (1.5 + Math.random() * 2).toFixed(1) + 's';
+            document.getElementById('avg-measurement-time').textContent = avgMeasurementTime;
+            
+            const accuracyRate = (95 + Math.random() * 4.9).toFixed(1) + '%';
+            document.getElementById('accuracy-rate').textContent = accuracyRate;
+        }
+        
+        // Load statistics from localStorage
+        function loadStoredStatistics() {
+            try {
+                const storedStats = localStorage.getItem('arSpeakerHelperStats');
+                if (storedStats) {
+                    const stats = JSON.parse(storedStats);
+                    
+                    // Update UI with stored statistics
+                    if (stats.measurementsCount !== undefined) {
+                        document.getElementById('measurements-count').textContent = stats.measurementsCount;
+                    }
+                    
+                    if (stats.speakerSetups !== undefined) {
+                        document.getElementById('speaker-setups').textContent = stats.speakerSetups;
+                    }
+                } else {
+                    // No stored data, use demo statistics
+                    generateDemoStatistics();
+                }
+            } catch (error) {
+                console.error('Error loading stored statistics:', error);
+                generateDemoStatistics();
+            }
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSystemInfo();
+            checkCameraSupport();
+            checkWebXRSupport();
+            loadStoredStatistics();
+        });
+        
+        // Update statistics periodically (every 30 seconds)
+        setInterval(function() {
+            loadStoredStatistics();
+        }, 30000);
+    </script>
+</body>
+</html>

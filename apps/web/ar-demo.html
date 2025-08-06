@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Speaker Position Helper - Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .demo-video {
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            background: #000;
+            border-radius: 8px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .feature-list li:before {
+            content: "✅ ";
+            margin-right: 10px;
+        }
+        
+        .button-group {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 10px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔊 AR Speaker Position Helper - Demo</h1>
+        
+        <div class="demo-section">
+            <h2>Welcome to the AR Speaker Position Helper Demo</h2>
+            <p>This application helps you optimize your audio setup using augmented reality measurement tools. 
+            Measure distances between speakers and listening positions to achieve the perfect audio experience.</p>
+        </div>
+        
+        <div class="demo-section">
+            <h3>Key Features</h3>
+            <ul class="feature-list">
+                <li>Real-time camera-based distance measurement</li>
+                <li>Visual overlay with measurement points and lines</li>
+                <li>Support for metric and imperial units</li>
+                <li>Speaker position optimization guidance</li>
+                <li>Mobile-friendly responsive design</li>
+                <li>No installation required - works in your browser</li>
+            </ul>
+        </div>
+        
+        <div class="demo-section">
+            <h3>How It Works</h3>
+            <div class="demo-video">
+                <div style="text-align: center;">
+                    <p>📱 Camera View with AR Overlay</p>
+                    <p style="font-size: 14px; opacity: 0.8;">
+                        Tap two points to measure distance<br>
+                        Visual feedback with measurement line<br>
+                        Real-time distance calculation
+                    </p>
+                </div>
+            </div>
+            <ol>
+                <li><strong>Enable Camera:</strong> Grant camera permission when prompted</li>
+                <li><strong>Point and Tap:</strong> Tap first point where you want to start measuring</li>
+                <li><strong>Second Point:</strong> Tap second point to complete the measurement</li>
+                <li><strong>Read Results:</strong> Distance appears in both centimeters and inches</li>
+                <li><strong>Optimize:</strong> Use measurements to position speakers optimally</li>
+            </ol>
+        </div>
+        
+        <div class="demo-section">
+            <h3>Best Practices for Speaker Positioning</h3>
+            <ul>
+                <li><strong>Stereo Setup:</strong> Equal distance from each speaker to listening position</li>
+                <li><strong>Triangle Formation:</strong> Form an equilateral triangle for optimal stereo imaging</li>
+                <li><strong>Height Matching:</strong> Tweeters at ear level when seated</li>
+                <li><strong>Room Acoustics:</strong> Consider wall reflections and room treatment</li>
+                <li><strong>Near-field Monitors:</strong> Typically 3-8 feet from listening position</li>
+            </ul>
+        </div>
+        
+        <div class="demo-section">
+            <h3>System Requirements</h3>
+            <ul>
+                <li>Modern web browser (Chrome, Firefox, Safari, Edge)</li>
+                <li>Device with camera (smartphone, tablet, laptop)</li>
+                <li>Camera permissions enabled</li>
+                <li>Good lighting conditions for best accuracy</li>
+                <li>HTTPS connection (required for camera access)</li>
+            </ul>
+        </div>
+        
+        <div class="button-group">
+            <a href="../" class="btn">Launch AR Helper</a>
+            <a href="/ar-test.html" class="btn btn-secondary">Test AR Features</a>
+            <a href="/stats.html" class="btn btn-secondary">View Statistics</a>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #666; font-size: 14px;">
+            <p>AR Speaker Position Helper v1.0.0</p>
+            <p>Optimize your audio experience with precision measurement</p>
+        </div>
+    </div>
+</body>
+</html>
