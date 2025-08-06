@@ -90,8 +90,15 @@ window.THREE = {
     Mesh: function(geometry, material) {
         this.geometry = geometry;
         this.material = material;
-        this.position = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+        this.position = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; }, copy: function(v) { this.x = v.x; this.y = v.y; this.z = v.z; } };
         this.rotation = { x: 0, y: 0, z: 0 };
+        this.scale = { 
+            x: 1, y: 1, z: 1, 
+            set: function(x, y, z) { this.x = x; this.y = y; this.z = z; },
+            setScalar: function(s) { this.x = s; this.y = s; this.z = s; },
+            multiplyScalar: function(s) { this.x *= s; this.y *= s; this.z *= s; }
+        };
+        this.name = '';
     },
     
     Vector2: function(x, y) {
@@ -106,16 +113,40 @@ window.THREE = {
         this.clone = function() {
             return new window.THREE.Vector3(this.x, this.y, this.z);
         };
+        this.copy = function(v) {
+            this.x = v.x;
+            this.y = v.y;
+            this.z = v.z;
+            return this;
+        };
         this.add = function(vector) {
             this.x += vector.x;
             this.y += vector.y;
             this.z += vector.z;
             return this;
         };
+        this.addVectors = function(a, b) {
+            this.x = a.x + b.x;
+            this.y = a.y + b.y;
+            this.z = a.z + b.z;
+            return this;
+        };
         this.multiplyScalar = function(scalar) {
             this.x *= scalar;
             this.y *= scalar;
             this.z *= scalar;
+            return this;
+        };
+        this.distanceTo = function(v) {
+            const dx = this.x - v.x;
+            const dy = this.y - v.y;
+            const dz = this.z - v.z;
+            return Math.sqrt(dx * dx + dy * dy + dz * dz);
+        };
+        this.set = function(x, y, z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
             return this;
         };
     },
@@ -189,6 +220,9 @@ window.THREE = {
         this.geometry = geometry;
         this.material = material;
         this.position = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+        this.rotation = { x: 0, y: 0, z: 0 };
+        this.scale = { x: 1, y: 1, z: 1 };
+        this.name = '';
     },
     
     CylinderGeometry: function(radiusTop, radiusBottom, height, radialSegments, heightSegments) {
@@ -200,6 +234,84 @@ window.THREE = {
             heightSegments: heightSegments || 1
         };
         this.dispose = function() {};
+    },
+    
+    ConeGeometry: function(radius, height, radialSegments) {
+        this.parameters = {
+            radius: radius || 1,
+            height: height || 1,
+            radialSegments: radialSegments || 8
+        };
+        this.dispose = function() {};
+    },
+    
+    BoxGeometry: function(width, height, depth) {
+        this.parameters = {
+            width: width || 1,
+            height: height || 1,
+            depth: depth || 1
+        };
+        this.dispose = function() {};
+    },
+    
+    RingGeometry: function(innerRadius, outerRadius, thetaSegments, phiSegments) {
+        this.parameters = {
+            innerRadius: innerRadius || 0.5,
+            outerRadius: outerRadius || 1,
+            thetaSegments: thetaSegments || 8,
+            phiSegments: phiSegments || 1
+        };
+        this.dispose = function() {};
+    },
+    
+    Group: function() {
+        this.children = [];
+        this.position = { x: 0, y: 0, z: 0, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+        this.rotation = { x: 0, y: 0, z: 0 };
+        this.scale = { x: 1, y: 1, z: 1, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+        this.add = function(object) {
+            this.children.push(object);
+        };
+        this.remove = function(object) {
+            const index = this.children.indexOf(object);
+            if (index > -1) this.children.splice(index, 1);
+        };
+    },
+    
+    Raycaster: function() {
+        this.setFromCamera = function(mouse, camera) {};
+        this.intersectObject = function(object) {
+            // Mock intersection - return a point on the object
+            return [{
+                point: new window.THREE.Vector3(0, 0, -2),
+                distance: 2
+            }];
+        };
+    },
+    
+    Sprite: function(material) {
+        this.material = material;
+        this.position = { x: 0, y: 0, z: 0, copy: function(v) { this.x = v.x; this.y = v.y; this.z = v.z; } };
+        this.scale = { x: 1, y: 1, z: 1, set: function(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+    },
+    
+    SpriteMaterial: function(options) {
+        options = options || {};
+        this.map = options.map;
+        this.transparent = options.transparent || false;
+        this.opacity = options.opacity || 1;
+        this.dispose = function() {};
+    },
+    
+    CanvasTexture: function(canvas) {
+        this.canvas = canvas;
+        this.needsUpdate = true;
+        this.dispose = function() {};
+    },
+    
+    BufferAttribute: function(array, itemSize) {
+        this.array = array;
+        this.itemSize = itemSize;
     }
 };
 
