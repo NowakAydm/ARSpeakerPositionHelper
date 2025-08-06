@@ -3,42 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AR Speak        </main>
-
-        <!-- Footer -->
-        <footer class="app-footer">
-            <p>Optimize your audio experience with precision positioning</p>
-        </footer>ition Helper - Optimize your audio listening experience">
+    <meta name="description" content="Simple 3D Measurement Tool">
     
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="AR Speaker">
-    <meta name="mobile-web-app-capable" content="yes">
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Favicon and Apple Touch Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120x120.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="icons/icon-114x114.png">
-    <link rel="apple-touch-icon" sizes="76x76" href="icons/icon-76x76.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="icons/icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="60x60" href="icons/icon-60x60.png">
-    <link rel="apple-touch-icon" sizes="57x57" href="icons/icon-57x57.png">
-    
-    <!-- Microsoft Tiles -->
-    <meta name="msapplication-TileImage" content="icons/icon-144x144.png">
-    <meta name="msapplication-TileColor" content="#000000">
-    <meta name="msapplication-config" content="browserconfig.xml">
-    
-    <title>AR Speaker Position Helper</title>
+    <title>3D Measurement Tool</title>
     
     <!-- Styles -->
     <link rel="stylesheet" href="src/styles.css">
@@ -48,178 +15,58 @@
     <div id="app">
         <!-- Header -->
         <header class="app-header">
-            <h1>AR Speaker Position Helper</h1>
-            <p class="subtitle">Find your optimal stereo triangle with precision positioning</p>
+            <h1>3D Measurement Tool</h1>
+            <p class="subtitle">Click two points in 3D space to measure distance</p>
         </header>
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <!-- Camera View Container -->
-            <div id="ar-container" class="ar-container">
-                <div class="ar-placeholder">
+            <!-- 3D View Container -->
+            <div id="measurement-container" class="measurement-container">
+                <div class="measurement-placeholder">
                     <div class="placeholder-content">
-                        <div class="placeholder-icon">📱</div>
-                        <h2>Camera View</h2>
-                        <p>Start your session to begin</p>
-                    </div>
-                </div>
-                
-                <!-- Floating Mode Indicator -->
-                <div id="mode-indicator" class="mode-indicator hidden">
-                    <span id="mode-text">Positioning Mode</span>
-                    <div class="mode-icon">📍</div>
-                </div>
-            </div>
-
-            <!-- Quick Action Bar -->
-            <div class="quick-actions">
-                <button id="start-ar" class="action-button primary">
-                    <span class="button-icon">▶</span>
-                    <span class="button-text">Start Session</span>
-                </button>
-                <button id="measure-mode" class="action-button secondary" disabled>
-                    <span class="button-icon">📏</span>
-                    <span class="button-text">Measure</span>
-                </button>
-                <button id="calibrate" class="action-button secondary" disabled>
-                    <span class="button-icon">🎯</span>
-                    <span class="button-text">Calibrate</span>
-                </button>
-                <button id="ar-helper-react" class="action-button primary" onclick="window.open('/react-app.html', '_blank')">
-                    <span class="button-icon">🚀</span>
-                    <span class="button-text">AR Helper</span>
-                </button>
-                <button id="reset" class="action-button tertiary">
-                    <span class="button-icon">↻</span>
-                    <span class="button-text">Reset</span>
-                </button>
-            </div>
-
-            <!-- Expandable Tools Panel -->
-            <div class="tools-panel">
-                <button class="tools-toggle" id="tools-toggle">
-                    <span class="toggle-icon">⚡</span>
-                    <span class="toggle-text">Tools</span>
-                    <span class="toggle-arrow">▼</span>
-                </button>
-                
-                <div class="tools-content" id="tools-content">
-                    <!-- Measurement Tools -->
-                    <div class="tool-section">
-                        <h4>Measurement Tools</h4>
-                        <div class="tool-grid">
-                            <button id="clear-measurements" class="tool-button" disabled>
-                                <span class="tool-icon">🧹</span>
-                                <span class="tool-label">Clear All</span>
-                            </button>
-                            <button id="undo-last-point" class="tool-button" disabled>
-                                <span class="tool-icon">↶</span>
-                                <span class="tool-label">Undo</span>
-                            </button>
-                            <button id="toggle-units" class="tool-button" disabled>
-                                <span class="tool-icon">📐</span>
-                                <span class="tool-label">Units</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Stats Display -->
-                    <div class="tool-section">
-                        <h4>Measurements</h4>
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <span class="stat-label">Points</span>
-                                <span class="stat-value" id="point-count">0</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Total Distance</span>
-                                <span class="stat-value" id="total-distance">0 m</span>
-                            </div>
-                        </div>
+                        <div class="placeholder-icon">📏</div>
+                        <h2>3D Measurement View</h2>
+                        <p>Click "Start" to begin measuring</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Status Cards -->
-            <div class="status-cards">
-                <div class="status-card" id="camera-status-card">
-                    <div class="status-header">
-                        <span class="status-icon">📹</span>
-                        <span class="status-title">Camera</span>
-                    </div>
-                    <div class="status-value" id="ar-status">Ready</div>
-                </div>
-                
-                <div class="status-card" id="speakers-status-card">
-                    <div class="status-header">
-                        <span class="status-icon">🔊</span>
-                        <span class="status-title">Speakers</span>
-                    </div>
-                    <div class="status-value" id="speaker-count">0/2</div>
-                </div>
-                
-                <div class="status-card" id="position-status-card">
-                    <div class="status-header">
-                        <span class="status-icon">👤</span>
-                        <span class="status-title">Position</span>
-                    </div>
-                    <div class="status-value" id="position-status">Not Set</div>
-                </div>
-                
-                <div class="status-card" id="quality-status-card">
-                    <div class="status-header">
-                        <span class="status-icon">📊</span>
-                        <span class="status-title">Quality</span>
-                    </div>
-                    <div class="status-value" id="triangle-quality">-</div>
-                </div>
+            <!-- Controls -->
+            <div class="controls">
+                <button id="start-session" class="btn btn-primary">
+                    <span class="btn-icon">▶</span>
+                    <span class="btn-text">Start</span>
+                </button>
+                <button id="clear-measurement" class="btn btn-secondary" disabled>
+                    <span class="btn-icon">🧹</span>
+                    <span class="btn-text">Clear</span>
+                </button>
+                <button id="reset-session" class="btn btn-tertiary">
+                    <span class="btn-icon">↻</span>
+                    <span class="btn-text">Reset</span>
+                </button>
             </div>
 
-            <!-- Help & Info -->
-            <div class="info-panel">
-                <button id="debug-toggle" class="info-button">
-                    <span class="info-icon">🔍</span>
-                    <span class="info-text">Debug</span>
-                </button>
+            <!-- Distance Display -->
+            <div id="distance-display" class="distance-display">
+                <div class="distance-label">Distance:</div>
+                <div id="distance-value" class="distance-value">-</div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions">
+                <p id="instruction-text">Click "Start" to begin measuring distance between two points</p>
             </div>
         </main>
-
-        <!-- Debug Console -->
-        <div id="debug-console" class="debug-console">
-            <div class="debug-header">
-                <span>Debug Console</span>
-                <div>
-                    <button class="debug-clear" onclick="document.getElementById('debug-content').innerHTML = ''">Clear</button>
-                    <button class="debug-close" onclick="document.getElementById('debug-console').classList.add('hidden')">×</button>
-                </div>
-            </div>
-            <div class="debug-content" id="debug-content">
-                <div class="debug-message info">[Debug] Console initialized - you can see all app messages here</div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <footer class="app-footer">
-            <p>Ensure good lighting and point camera at speakers</p>
-            <div style="margin-top: 10px;">
-                <a href="/ar-demo.html" style="color: #007bff; text-decoration: none; margin: 0 10px;">View Demo</a>
-                <a href="/ar-test.html" style="color: #007bff; text-decoration: none; margin: 0 10px;">Test AR Features</a>
-                <a href="/stats.html" style="color: #007bff; text-decoration: none; margin: 0 10px;">Statistics</a>
-                <a href="/react-app.html" style="color: #007bff; text-decoration: none; margin: 0 10px;">AR Helper (React)</a>
-            </div>
-        </footer>
     </div>
 
     <!-- Loading Overlay -->
-    <div id="loading" class="loading-overlay">
-        <button class="loading-close" onclick="document.getElementById('loading').style.display='none'" title="Hide loading panel">×</button>
-        <div class="loading-spinner"></div>
-        <p id="loading-message">Initializing application...</p>
-        <div class="loading-progress">
-            <div class="progress-step" id="step-ui">⏳ Setting up UI...</div>
-            <div class="progress-step" id="step-detection">⏳ Loading AI models...</div>
+    <div id="loading" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p id="loading-message">Initializing 3D scene...</p>
         </div>
-        <p class="loading-hint">Click "Start Camera Session" when ready</p>
     </div>
 
     <!-- Error Modal -->
@@ -227,127 +74,98 @@
         <div class="modal-content">
             <h3>Error</h3>
             <p id="error-message">An error occurred</p>
-            <button id="error-close" class="primary-button">OK</button>
+            <button id="error-close" class="btn btn-primary">OK</button>
         </div>
     </div>
 
-    <!-- External Dependencies - Real libraries from CDN with local fallbacks -->
+    <!-- Three.js Library with fallback -->
     <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
     <script>
-        // Fallback to local mock if CDN fails
+        // Fallback: Create a simple mock THREE object if CDN fails
         if (!window.THREE) {
-            document.write('<script src="vendor/three-mock.js"><\/script>');
+            console.log('THREE.js CDN failed, creating mock object for demo');
+            window.THREE = {
+                Scene: function() { 
+                    this.add = function() {}; 
+                    this.remove = function() {};
+                    this.traverse = function() {};
+                    this.background = null;
+                },
+                PerspectiveCamera: function() { 
+                    this.position = { set: function() {}, x: 0, y: 0, z: 0 };
+                    this.aspect = 1;
+                    this.updateProjectionMatrix = function() {};
+                },
+                WebGLRenderer: function() { 
+                    this.domElement = document.createElement('canvas');
+                    this.domElement.style.width = '100%';
+                    this.domElement.style.height = '100%';
+                    this.domElement.style.background = '#333';
+                    this.setPixelRatio = function() {};
+                    this.setSize = function() {};
+                    this.dispose = function() {};
+                    this.render = function() {};
+                    this.shadowMap = { enabled: false, type: null };
+                },
+                Color: function(color) { return color; },
+                AmbientLight: function() { this.position = { set: function() {} }; },
+                DirectionalLight: function() { 
+                    this.position = { set: function() {} };
+                    this.castShadow = false;
+                    this.shadow = { mapSize: { width: 0, height: 0 } };
+                },
+                GridHelper: function() {},
+                PlaneGeometry: function() { this.dispose = function() {}; },
+                SphereGeometry: function() { this.dispose = function() {}; },
+                BufferGeometry: function() { 
+                    this.setFromPoints = function() { return this; };
+                    this.setAttribute = function() {};
+                    this.dispose = function() {};
+                },
+                MeshBasicMaterial: function() { 
+                    this.dispose = function() {};
+                    this.opacity = 1;
+                },
+                LineBasicMaterial: function() { 
+                    this.dispose = function() {};
+                    this.opacity = 1;
+                },
+                Mesh: function() { 
+                    this.position = { copy: function() {}, set: function() {}, x: 0, y: 0, z: 0 };
+                    this.scale = { set: function() {}, multiplyScalar: function() {}, x: 1, y: 1, z: 1 };
+                    this.rotation = { x: 0, y: 0, z: 0 };
+                },
+                Line: function() { 
+                    this.position = { copy: function() {}, set: function() {}, x: 0, y: 0, z: 0 };
+                },
+                Vector2: function() { this.x = 0; this.y = 0; },
+                Vector3: function(x, y, z) { 
+                    this.x = x || 0; 
+                    this.y = y || 0; 
+                    this.z = z || 0;
+                    this.clone = function() { return new window.THREE.Vector3(this.x, this.y, this.z); };
+                    this.copy = function(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; };
+                    this.distanceTo = function(v) { 
+                        return Math.sqrt(Math.pow(v.x - this.x, 2) + Math.pow(v.y - this.y, 2) + Math.pow(v.z - this.z, 2)); 
+                    };
+                    this.addVectors = function(a, b) { this.x = a.x + b.x; this.y = a.y + b.y; this.z = a.z + b.z; return this; };
+                    this.multiplyScalar = function(s) { this.x *= s; this.y *= s; this.z *= s; return this; };
+                },
+                Raycaster: function() { 
+                    this.setFromCamera = function() {};
+                    this.intersectObject = function() { 
+                        // Return a mock intersection for demo
+                        return [{ point: new window.THREE.Vector3(Math.random() * 4 - 2, 0, Math.random() * 4 - 2) }];
+                    };
+                },
+                BufferAttribute: function() {},
+                PCFSoftShadowMap: 'PCFSoftShadowMap'
+            };
+            console.log('Mock THREE.js object created for demo purposes');
         }
     </script>
     
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
-    <script>
-        // Fallback to local mock if CDN fails
-        if (!window.tf || !window.cocoSsd) {
-            document.write('<script src="vendor/tf-mock.js"><\/script>');
-        }
-    </script>
-    
-    <!-- Scripts -->
+    <!-- Main Application -->
     <script type="module" src="src/app.js"></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        // Register service worker for PWA functionality
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        console.log('✅ SW registered:', registration);
-                        
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New content available, refresh to update
-                                    if (confirm('New version available! Refresh to update?')) {
-                                        window.location.reload();
-                                    }
-                                }
-                            });
-                        });
-                    })
-                    .catch((error) => {
-                        console.log('❌ SW registration failed:', error);
-                    });
-            });
-        }
-
-        // Handle install prompt
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('💾 Install prompt available');
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Show custom install button or notification
-            showInstallButton();
-        });
-
-        // Show install button
-        function showInstallButton() {
-            const installButton = document.createElement('button');
-            installButton.textContent = 'Install App';
-            installButton.className = 'install-button';
-            installButton.style.cssText = `
-                position: fixed;
-                bottom: 1rem;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #007bff;
-                color: white;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 25px;
-                font-weight: bold;
-                cursor: pointer;
-                z-index: 1000;
-                box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-                animation: slideUp 0.3s ease-out;
-            `;
-            
-            installButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    console.log(`👤 User response: ${outcome}`);
-                    deferredPrompt = null;
-                    installButton.remove();
-                }
-            });
-            
-            document.body.appendChild(installButton);
-            
-            // Auto-hide after 10 seconds
-            setTimeout(() => {
-                if (installButton.parentNode) {
-                    installButton.remove();
-                }
-            }, 10000);
-        }
-
-        // Add install animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideUp {
-                from {
-                    transform: translateX(-50%) translateY(100px);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(-50%) translateY(0);
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
 </body>
 </html>
