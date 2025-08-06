@@ -14,7 +14,11 @@ export class UserInteraction {
         this.listeners = new Map();
         this.container = null;
         this.cameraSession = null;
-        this.mar    /**
+        this.markers = [];
+        this.currentFrame = null;
+    }
+
+    /**
      * Cleanup and destroy interaction
      */
     destroy() {
@@ -40,7 +44,6 @@ export class UserInteraction {
         }
         
         console.log('👆 Interaction destroyed');
-    }   this.currentFrame = null;
     }
 
     /**
